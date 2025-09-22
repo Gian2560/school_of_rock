@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model accion_comercial {
+  id_accion_comercial BigInt    @id @default(autoincrement())
+  tipo_accion         String?   @db.VarChar(30)
+  id_contacto         BigInt?
+  id_lead             BigInt?
+  id_cita             BigInt?
+  asesor_id           Int?
+  estado              String?   @db.VarChar(30)
+  fecha_accion        DateTime? @default(now()) @db.Timestamp(6)
+  nota                String
+  cita                cita?     @relation(fields: [id_cita], references: [id_cita], onDelete: Cascade, onUpdate: NoAction)
+  contacto            contacto? @relation(fields: [id_contacto], references: [id_contacto], onDelete: Cascade, onUpdate: NoAction)
+  lead                lead?     @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model asesor {
+  id_asesor BigInt  @id @default(autoincrement())
+  nombres   String  @db.VarChar(120)
+  apellidos String  @db.VarChar(120)
+  celular   String? @db.VarChar(12)
+  num_leads Int?    @default(0)
+}
+
+model campanha {
+  id_campanha     BigInt    @id @default(autoincrement())
+  nombre_campanha String    @db.VarChar(100)
+  descripcion     String?
+  fecha_creacion  DateTime? @default(now()) @db.Timestamp(6)
+  estado_campanha String?   @default("activa") @db.VarChar(25)
+  mensaje_cliente String?
+  fecha_inicio    DateTime? @default(now()) @db.Timestamp(6)
+  fecha_fin       DateTime? @db.Timestamp(6)
+  num_clientes    Int?      @default(0)
+  tipo            String    @default("in") @db.VarChar(10)
+  id_plantilla    BigInt?
+  template        template? @relation(fields: [id_plantilla], references: [id_plantilla], onUpdate: NoAction)
+}
+
+model cita {
+  id_cita          BigInt             @id @default(autoincrement())
+  id_contacto      BigInt
+  tipo             String             @db.VarChar(100)
+  fecha_programada DateTime           @db.Timestamp(6)
+  estado           String             @default("agendada") @db.VarChar(100)
+  notas            String?
+  fecha_creacion   DateTime           @default(now()) @db.Timestamp(6)
+  accion_comercial accion_comercial[]
+  contacto         contacto           @relation(fields: [id_contacto], references: [id_contacto], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model cliente_campanha {
+  id_cliente_campanha BigInt    @id @default(autoincrement())
+  id_contacto         Int
+  id_campanha         Int
+  fecha_asociacion    DateTime? @default(now()) @db.Timestamp(6)
+  whatsapp_message_id String?   @db.VarChar(200)
+  estado_mensaje      String?   @db.VarChar(50)
+  fecha_envio         DateTime? @db.Timestamp(6)
+  fecha_ultimo_estado DateTime? @db.Timestamp(6)
+  message_status      String?   @db.VarChar(20)
+  error_code          Int?
+  last_update         DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model contacto {
+  id_contacto      BigInt             @id @default(autoincrement())
+  rol_contacto     String             @default("apoderado") @db.VarChar(100)
+  nombres          String             @db.VarChar(100)
+  apellidos        String?            @db.VarChar(100)
+  telefono         String?            @unique(map: "uq_contacto_tel") @db.VarChar(20)
+  correo           String?            @unique(map: "uq_contacto_correo") @db.VarChar(120)
+  distrito         String?            @db.VarChar(120)
+  estado           String?            @db.VarChar(30)
+  puntaje_nse      Int?
+  banda_nse        String?            @db.VarChar(100)
+  puntaje_interes  Int?
+  banda_interes    String?            @db.VarChar(100)
+  fecha_nacimiento DateTime?          @db.Date
+  no_contactar     Boolean            @default(false)
+  whatsapp_opt_in  DateTime?          @db.Timestamp(6)
+  extra            Json?
+  segmento         String?            @db.VarChar(50)
+  fecha_creacion   DateTime           @default(now()) @db.Timestamp(6)
+  accion_comercial accion_comercial[]
+  cita             cita[]
+  lead             lead[]
+  lead_contacto    lead_contacto[]
+}
+
+model historico_contacto_estado {
+  id_historico_contacto_estado BigInt    @id @default(autoincrement())
+  id_contacto                  Int
+  estado                       String    @db.VarChar(25)
+  fecha_estado                 DateTime? @default(now()) @db.Timestamp(6)
+  detalle                      String?
+}
+
+model historico_lead_estado {
+  id_historico_lead_estado BigInt    @id @default(autoincrement())
+  id_lead                  Int
+  estado                   String    @db.VarChar(25)
+  fecha_estado             DateTime? @default(now()) @db.Timestamp(6)
+  detalle                  String?
+}
+
+model historico_segmento_estado {
+  id_historico_contacto_estado BigInt    @id @default(autoincrement())
+  id_contacto                  Int
+  segmento                     String    @db.VarChar(50)
+  fecha_estado                 DateTime? @default(now()) @db.Timestamp(6)
+  detalle                      String?
+}
+
+model instrumento {
+  id_instrumento   BigInt             @id @default(autoincrement())
+  nombre           String             @unique @db.VarChar(100)
+  lead_instrumento lead_instrumento[]
+}
+
+model lead {
+  id_lead             BigInt             @id @default(autoincrement())
+  id_sede             BigInt?
+  id_contacto         BigInt?
+  fecha_creacion      DateTime           @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime           @default(now()) @db.Timestamp(6)
+  etapa               String             @default("nuevo") @db.VarChar(100)
+  fuente              String?            @db.VarChar(100)
+  canal_primero       String?            @db.VarChar(100)
+  canal_ultimo        String?            @db.VarChar(100)
+  ultima_interaccion  DateTime?          @db.Timestamp(6)
+  precio_confirmado   Boolean?
+  id_hubspot          String?            @db.VarChar(100)
+  cluster             String?            @db.VarChar(100)
+  colegio             String?            @db.VarChar(160)
+  estado              String?            @db.VarChar(30)
+  notas               String?
+  accion_comercial    accion_comercial[]
+  contacto            contacto?          @relation(fields: [id_contacto], references: [id_contacto], onUpdate: NoAction)
+  sede                sede?              @relation(fields: [id_sede], references: [id_sede], onUpdate: NoAction)
+  lead_contacto       lead_contacto[]
+  lead_instrumento    lead_instrumento[]
+}
+
+model lead_contacto {
+  id_lead     BigInt
+  id_contacto BigInt
+  relacion    String?  @db.VarChar(100)
+  contacto    contacto @relation(fields: [id_contacto], references: [id_contacto], onDelete: Cascade, onUpdate: NoAction)
+  lead        lead     @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([id_lead, id_contacto])
+}
+
+model lead_instrumento {
+  id_lead        BigInt
+  id_instrumento BigInt
+  instrumento    instrumento @relation(fields: [id_instrumento], references: [id_instrumento], onDelete: Cascade, onUpdate: NoAction)
+  lead           lead        @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([id_lead, id_instrumento])
+}
+
+model rol {
+  id_rol      BigInt    @id @default(autoincrement())
+  nombre      String    @unique @db.VarChar(100)
+  descripcion String?   @db.VarChar(255)
+  usuario     usuario[]
+}
+
+model sede {
+  id_sede   BigInt  @id @default(autoincrement())
+  nombre    String  @db.VarChar(120)
+  distrito  String? @db.VarChar(120)
+  direccion String? @db.VarChar(200)
+  activo    Boolean @default(true)
+  lead      lead[]
+}
+
+model template {
+  id_plantilla         BigInt     @id @default(autoincrement())
+  nombre               String     @db.VarChar(100)
+  mensaje              String
+  created_at           DateTime   @default(now()) @db.Timestamp(6)
+  template_content_sid String     @default("") @db.VarChar(120)
+  parametro            Boolean    @default(false)
+  campanha             campanha[]
+}
+
+model usuario {
+  id_usuario     BigInt   @id @default(autoincrement())
+  username       String   @db.VarChar(120)
+  correo         String   @unique @db.VarChar(120)
+  password       String   @db.VarChar(255)
+  id_rol         BigInt?
+  activo         Boolean  @default(true)
+  fecha_creacion DateTime @default(now()) @db.Timestamp(6)
+  rol            rol?     @relation(fields: [id_rol], references: [id_rol], onUpdate: NoAction)
+}
