@@ -144,6 +144,9 @@ model lead {
   colegio             String?            @db.VarChar(160)
   estado              String?            @db.VarChar(30)
   notas               String?
+  nombre              String?            @db.VarChar(100)
+  apellidos           String?            @db.VarChar(100)
+  interes             String?            @db.VarChar(100)
   accion_comercial    accion_comercial[]
   contacto            contacto?          @relation(fields: [id_contacto], references: [id_contacto], onUpdate: NoAction)
   sede                sede?              @relation(fields: [id_sede], references: [id_sede], onUpdate: NoAction)
