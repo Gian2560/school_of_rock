@@ -26,14 +26,53 @@ import {
 
 import { useEffect } from "react"
 
+// Función para mapear etapas a estados
+function mapEtapaToStatus(etapa: string) {
+  switch (etapa) {
+    case 'nuevo':
+      return 'Nuevo'
+    case 'contactado':
+      return 'Contactado'
+    case 'llamada_agendada':
+      return 'Visita agendada'
+    case 'clase_prueba':
+      return 'Clase de prueba'
+    case 'seguimiento':
+      return 'En seguimiento'
+    case 'enrolado':
+      return 'Enrolado'
+    case 'no_interesado':
+      return 'No interesado'
+    default:
+      return 'Nuevo'
+  }
+}
+
 // Hook para obtener los leads desde la API
 function useLeads() {
   const [leads, setLeads] = useState<any[]>([])
   useEffect(() => {
     fetch("/api/leads")
       .then((res) => res.json())
-      .then(setLeads)
+      .then((data) => {
+        // Mapear los datos de la API al formato esperado por el componente
+        const mappedLeads = data.map((lead: any) => ({
+          id: lead.id,
+          name: `${lead.nombre} ${lead.apellidos}`.trim(),
+          email: lead.correo || 'Sin email',
+          segment: lead.segmento || 'C1',
+          status: mapEtapaToStatus(lead.etapa),
+          phone: lead.telefono || 'Sin teléfono',
+          district: lead.distrito || 'Sin distrito',
+          interest: lead.interes, // Puedes ajustar esto según tus datos
+          lastContact: new Date(lead.ultima_interaccion || lead.fecha_creacion).toLocaleDateString('es-ES'),
+          // Mantener datos originales para referencia
+          originalData: lead
+        }))
+        setLeads(mappedLeads)
+      })
   }, [])
+  console.log("Leads data:", leads)
   return leads
 }
 
@@ -96,7 +135,8 @@ export function Leads() {
   const filteredLeads = leadsData.filter((lead) => {
     const matchesSearch =
       lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.phone?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSegment = filterSegment === "all" || lead.segment === filterSegment
     return matchesSearch && matchesSegment
   })
