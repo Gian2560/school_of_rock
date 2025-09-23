@@ -4,12 +4,13 @@ import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Dashboard } from "@/components/dashboard"
 import { Leads } from "@/components/leads"
+import { Contactos } from "@/components/contactos"
 import { TaskCenter } from "@/components/task-center"
 import { Calendar } from "@/components/calendar"
 import { Campaigns } from "@/components/campaigns"
 
 export default function CRMPage() {
-  const [activeSection, setActiveSection] = useState("dashboard")
+  const [activeSection, setActiveSection] = useState("contactos")
 
   const renderContent = () => {
     switch (activeSection) {
@@ -17,6 +18,8 @@ export default function CRMPage() {
         return <Dashboard />
       case "leads":
         return <Leads />
+      case "contactos":
+        return <Contactos />
       case "tasks":
         return <TaskCenter />
       case "calendar":

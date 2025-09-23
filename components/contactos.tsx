@@ -46,35 +46,35 @@ function mapEtapaToStatus(etapa: string) {
   }
 }
 // Hook para obtener los leads desde la API
-function useLeads() {
-  const [leads, setLeads] = useState<any[]>([])
+function useContactos() {
+  const [contactos, setContactos] = useState<any[]>([])
   useEffect(() => {
-    fetch("/api/leads")
+    fetch("/api/contactos")
       .then((res) => res.json())
       .then((data) => {
         // Mapear los datos de la API al formato esperado por el componente
-        const mappedLeads = data.map((lead: any) => ({
-          id: lead.id,
-          name: `${lead.nombre} ${lead.apellidos}`.trim(),
-          email: lead.correo || 'Sin email',
-          segment: lead.segmento || 'C1',
-          status: mapEtapaToStatus(lead.etapa),
-          phone: lead.telefono || 'Sin teléfono',
-          district: lead.distrito || 'Sin distrito',
-          interest: lead.interes, // Puedes ajustar esto según tus datos
-          lastContact: new Date(lead.ultima_interaccion || lead.fecha_creacion).toLocaleDateString('es-ES'),
+        const mappedContactos = data.map((contacto: any) => ({
+          id_contacto: contacto.id_contacto,
+          name: `${contacto.nombres} ${contacto.apellidos}`.trim(),
+          segment: contacto.segmento || '',
+            status: contacto.estado,
+            district: contacto.distrito || '',
+            phone: contacto.telefono || '',
+            correo: contacto.correo || '',
+            fecha_creacion: contacto.fecha_creacion,
+          lastContact: new Date(contacto.fecha_creacion).toLocaleDateString('es-ES'),
           // Mantener datos originales para referencia
-          originalData: lead
+          originalData: contacto
         }))
-        setLeads(mappedLeads)
+        setContactos(mappedContactos)
       })
   }, [])
-  console.log("Leads data:", leads)
-  return leads
+  console.log("Leads data:", contactos)
+  return contactos
 }
 
 
-export function Leads() {
+export function Contactos() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterSegment, setFilterSegment] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
@@ -93,7 +93,7 @@ export function Leads() {
   const [dni, setDni] = useState("")
   const [interestLevel, setInterestLevel] = useState("")
 
-  const leadsData = useLeads()
+  const leadsData = useContactos()
 
   const getSegmentColor = (segment: string) => {
     switch (segment) {
@@ -127,16 +127,35 @@ export function Leads() {
       default:
         return "bg-gray-100 text-gray-800"
     }
-  }
-
-  const filteredLeads = leadsData.filter((lead) => {
+}
+    const filteredLeads = leadsData.filter((lead) => {
     const matchesSearch =
       lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.correo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.phone?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSegment = filterSegment === "all" || lead.segment === filterSegment
     return matchesSearch && matchesSegment
   })
+    const saveVisit = async () => {
+      if (!selectedLead) return;
+      const fechaHora = `${visitDate}T${visitTime}:00.000Z`;
+      await fetch("/api/contactos/cita", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id_contacto: selectedLead.id_contacto,
+          fechaHora, // solo este campo
+          notas: visitNotes,
+        }),
+      });
+      setVisitModalOpen(false);
+      setSelectedLead(null);
+    }
+//       lead.correo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//       lead.phone?.toLowerCase().includes(searchTerm.toLowerCase())
+//     const matchesSegment = filterSegment === "all" || lead.segment === filterSegment
+//     return matchesSearch && matchesSegment
+  
 
   const totalPages = Math.ceil(filteredLeads.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -176,11 +195,11 @@ export function Leads() {
     setSelectedLead(null)
   }
 
-  const saveVisit = () => {
-    // Aquí podrías hacer un POST a la API para guardar la visita
-    setVisitModalOpen(false)
-    setSelectedLead(null)
-  }
+//   const saveVisit = () => {
+//     // Aquí podrías hacer un POST a la API para guardar la visita
+//     setVisitModalOpen(false)
+//     setSelectedLead(null)
+//   }
 
   const saveCredit = () => {
     // Aquí podrías hacer un POST a la API para guardar el score
@@ -193,11 +212,11 @@ export function Leads() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Leads</h1>
+          <h1 className="text-3xl font-bold text-foreground">Contactos</h1>
           <p className="text-muted-foreground">Gestión de leads y conversaciones</p>
         </div>
         <Badge variant="outline" className="text-sm">
-          {filteredLeads.length} leads
+          {filteredLeads.length} contactos
         </Badge>
       </div>
 
@@ -228,7 +247,7 @@ export function Leads() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Leads</CardTitle>
+          <CardTitle>Lista de Contactos</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -239,14 +258,14 @@ export function Leads() {
                 <TableHead>Estado</TableHead>
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Distrito</TableHead>
-                <TableHead>Interés</TableHead>
+                {/* <TableHead>Interés</TableHead> */}
                 <TableHead>Último Contacto</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {currentLeads.map((lead) => (
-                <TableRow key={lead.id}>
+                <TableRow key={lead.id_contacto}>
                   <TableCell className="font-medium">{lead.name}</TableCell>
                   <TableCell>
                     <Badge className={getSegmentColor(lead.segment)}>{lead.segment}</Badge>
@@ -258,7 +277,7 @@ export function Leads() {
                   </TableCell>
                   <TableCell>{lead.phone}</TableCell>
                   <TableCell>{lead.district}</TableCell>
-                  <TableCell>{lead.interest}</TableCell>
+                  {/* <TableCell>{lead.interest}</TableCell> */}
                   <TableCell>{lead.lastContact}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
@@ -280,13 +299,13 @@ export function Leads() {
                               </p>
                               <span className="text-xs text-muted-foreground">14:30</span>
                             </div>
-                            <div className="bg-accent/10 p-3 rounded-lg ml-8">
+                            {/* <div className="bg-accent/10 p-3 rounded-lg ml-8">
                               <p className="text-sm">
                                 <strong>{lead.name}:</strong> Hola, me interesa información sobre clases de{" "}
                                 {lead.interest.toLowerCase()}
                               </p>
                               <span className="text-xs text-muted-foreground">14:32</span>
-                            </div>
+                            </div> */}
                             <div className="bg-muted p-3 rounded-lg">
                               <p className="text-sm">
                                 <strong>Bot:</strong> ¡Excelente! Te puedo ayudar con eso. ¿Podrías decirme en qué

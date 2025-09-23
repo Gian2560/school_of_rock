@@ -12,6 +12,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     { id: "leads", label: "Leads", icon: Users },
+    { id: "contactos", label: "Contactos", icon: Users },
     { id: "tasks", label: "Centro de tareas", icon: CheckSquare },
     { id: "calendar", label: "Calendario", icon: CalendarIcon },
     { id: "campaigns", label: "Campañas", icon: Megaphone },
