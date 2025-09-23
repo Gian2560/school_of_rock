@@ -138,7 +138,7 @@ export function Contactos() {
   })
     const saveVisit = async () => {
       if (!selectedLead) return;
-      const fechaHora = `${visitDate}T${visitTime}:00.000Z`;
+      const fechaHora = `${visitDate}T${visitTime}:00-05:00`;
       await fetch("/api/contactos/cita", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -1,62 +1,82 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect,useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronLeft, ChevronRight, CalendarIcon, Clock, User, Phone } from "lucide-react"
 
-const appointmentsData = [
-  {
-    id: 1,
-    title: "Visita - María González",
-    type: "visit",
-    time: "10:00 AM",
-    duration: "1h",
-    advisor: "Ana Martínez",
-    leadName: "María González",
-    segment: "C1",
-    date: "2024-01-16",
-    status: "confirmed",
-  },
-  {
-    id: 2,
-    title: "Llamada - Carlos Ruiz",
-    type: "call",
-    time: "3:00 PM",
-    duration: "30min",
-    advisor: "Ana Martínez",
-    leadName: "Carlos Ruiz",
-    segment: "C2",
-    date: "2024-01-16",
-    status: "pending",
-  },
-  {
-    id: 3,
-    title: "Clase de prueba - Ana López",
-    type: "trial",
-    time: "4:30 PM",
-    duration: "1h",
-    advisor: "Luis García",
-    leadName: "Ana López",
-    segment: "C1",
-    date: "2024-01-17",
-    status: "confirmed",
-  },
-  {
-    id: 4,
-    title: "Seguimiento - Pedro Martín",
-    type: "follow-up",
-    time: "11:00 AM",
-    duration: "20min",
-    advisor: "Ana Martínez",
-    leadName: "Pedro Martín",
-    segment: "C3",
-    date: "2024-01-18",
-    status: "pending",
-  },
-]
+type Cita = {
+  id_cita: number;
+  fecha_programada: string;
+  contacto?: {
+    nombres?: string;
+    apellidos?: string;
+    segmento?: string;
+  };
+};
+
+function useCitas() {
+  const [citas, setCitas] = useState<Cita[]>([]);
+  useEffect(() => {
+    fetch("/api/citas")
+      .then(res => res.json())
+      .then(setCitas);
+  }, []);
+  return citas;
+}
+
+// const appointmentsData = [
+//   {
+//     id: 1,
+//     title: "Visita - María González",
+//     type: "visit",
+//     time: "10:00 AM",
+//     duration: "1h",
+//     advisor: "Ana Martínez",
+//     leadName: "María González",
+//     segment: "C1",
+//     date: "2024-01-16",
+//     status: "confirmed",
+//   },
+//   {
+//     id: 2,
+//     title: "Llamada - Carlos Ruiz",
+//     type: "call",
+//     time: "3:00 PM",
+//     duration: "30min",
+//     advisor: "Ana Martínez",
+//     leadName: "Carlos Ruiz",
+//     segment: "C2",
+//     date: "2024-01-16",
+//     status: "pending",
+//   },
+//   {
+//     id: 3,
+//     title: "Clase de prueba - Ana López",
+//     type: "trial",
+//     time: "4:30 PM",
+//     duration: "1h",
+//     advisor: "Luis García",
+//     leadName: "Ana López",
+//     segment: "C1",
+//     date: "2024-01-17",
+//     status: "confirmed",
+//   },
+//   {
+//     id: 4,
+//     title: "Seguimiento - Pedro Martín",
+//     type: "follow-up",
+//     time: "11:00 AM",
+//     duration: "20min",
+//     advisor: "Ana Martínez",
+//     leadName: "Pedro Martín",
+//     segment: "C3",
+//     date: "2024-01-18",
+//     status: "pending",
+//   },
+// ]
 
 const daysOfWeek = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
 const months = [
@@ -75,9 +95,25 @@ const months = [
 ]
 
 export function Calendar() {
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 0, 16)) // January 16, 2024
+  const [currentDate, setCurrentDate] = useState(new Date()) // Mes y año actual por defecto
   const [view, setView] = useState("month")
   const [selectedAdvisor, setSelectedAdvisor] = useState("all")
+  const citas = useCitas();
+
+  // Mapea las citas al formato que usa el calendario
+  const appointmentsData = citas.map(cita => {
+    const fecha = new Date(cita.fecha_programada);
+    return {
+      id_cita: cita.id_cita,
+      title: `Visita - ${cita.contacto?.nombres ?? ""} ${cita.contacto?.apellidos ?? ""}`,
+      type: "visit",
+      time: fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Lima" }),
+      date: fecha.toISOString().slice(0, 10), // yyyy-mm-dd
+      leadName: `${cita.contacto?.nombres ?? ""} ${cita.contacto?.apellidos ?? ""}`,
+      segment: cita.contacto?.segmento ?? "",
+      status: "confirmed",
+    };
+  });
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -136,7 +172,7 @@ export function Calendar() {
 
   const getAppointmentsForDate = (date: string) => {
     return appointmentsData.filter(
-      (apt) => apt.date === date && (selectedAdvisor === "all" || apt.advisor === selectedAdvisor),
+      (apt) => apt.date === date
     )
   }
 
@@ -161,7 +197,7 @@ export function Calendar() {
           <div className={`text-sm font-medium mb-1 ${isToday ? "text-accent" : ""}`}>{day}</div>
           <div className="space-y-1">
             {appointments.slice(0, 2).map((apt) => (
-              <div key={apt.id} className={`text-xs p-1 rounded truncate ${getTypeColor(apt.type)}`}>
+              <div key={apt.id_cita} className={`text-xs p-1 rounded truncate ${getTypeColor(apt.type)}`}>
                 {apt.time} - {apt.leadName}
               </div>
             ))}
@@ -201,7 +237,7 @@ export function Calendar() {
         ) : (
           <div className="space-y-3">
             {todayAppointments.map((apt) => (
-              <Card key={apt.id}>
+              <Card key={apt.id_cita}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -210,7 +246,7 @@ export function Calendar() {
                       <div>
                         <h4 className="font-medium">{apt.title}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {apt.time} - {apt.duration} | {apt.advisor}
+                          {apt.time}
                         </p>
                       </div>
                     </div>
