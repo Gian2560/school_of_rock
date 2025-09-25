@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-function serializeBigInt(obj: any): any {
-  return JSON.parse(JSON.stringify(obj, (key, value) =>
-    typeof value === 'bigint' ? value.toString() : value
-  ));
-}
+// function serializeBigInt(obj: any): any {
+//   return JSON.parse(JSON.stringify(obj, (key, value) =>
+//     typeof value === 'bigint' ? value.toString() : value
+//   ));
+// }
 
 export async function GET() {
   // Trae todas las citas con el contacto relacionado
@@ -17,6 +17,6 @@ export async function GET() {
       fecha_programada: 'asc',
     },
   });
-  const serializedCitas = serializeBigInt(citas);
+  const serializedCitas = citas;
   return NextResponse.json(serializedCitas);
 }

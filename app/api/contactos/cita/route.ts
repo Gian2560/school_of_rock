@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-function serializeBigInt(obj: any): any {
-  return JSON.parse(JSON.stringify(obj, (key, value) =>
-    typeof value === 'bigint' ? value.toString() : value
-  ));
-}
+// function serializeBigInt(obj: any): any {
+//   return JSON.parse(JSON.stringify(obj, (key, value) =>
+//     typeof value === 'bigint' ? value.toString() : value
+//   ));
+// }
 export async function POST(request: Request) {
   const data = await request.json();
-  if (data.id_cita) data.id_cita = BigInt(data.id_cita);
-  if (data.id_contacto) data.id_contacto = BigInt(data.id_contacto);
+  // if (data.id_cita) data.id_cita = BigInt(data.id_cita);
+  // if (data.id_contacto) data.id_contacto = BigInt(data.id_contacto);
     
   
   // data debe tener: contactoId, fecha, hora, notas
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       tipo: 'visita', // Por defecto, puedes ajustar esto según tus necesidades
     },
   });
-  const serializedCita = serializeBigInt(cita);
+  const serializedCita = cita;
   return NextResponse.json(serializedCita);
 }
 
@@ -35,6 +35,6 @@ export async function GET() {
       fecha_programada: 'asc',
     },
   });
-  const serializedCitas = serializeBigInt(citas);
+  const serializedCitas = citas;
   return NextResponse.json(serializedCitas);
 }
