@@ -93,6 +93,14 @@ export function Contactos() {
   const [dni, setDni] = useState("")
   const [interestLevel, setInterestLevel] = useState("")
 
+// ---- NUEVOS estados para conversación ----
+  const [convOpen, setConvOpen] = useState(false)
+  const [convLoading, setConvLoading] = useState(false)
+  const [convError, setConvError] = useState<string | null>(null)
+  const [convMsgs, setConvMsgs] = useState<
+    { id: string; text: string; from: "bot" | "usuario"; fechaTexto: string }[]
+  >([])
+
   const leadsData = useContactos()
 
   const getSegmentColor = (segment: string) => {
@@ -136,6 +144,26 @@ export function Contactos() {
     const matchesSegment = filterSegment === "all" || lead.segment === filterSegment
     return matchesSearch && matchesSegment
   })
+
+  // ----- NUEVO: cargar conversación -----
+  const openConversation = async (lead: any) => {
+    setSelectedLead(lead)
+    setConvOpen(true)
+    setConvLoading(true)
+    setConvError(null)
+    setConvMsgs([])
+
+    try {
+      const res = await fetch(`/api/conversacion/${lead.id_contacto}`, { cache: "no-store" })
+      if (!res.ok) throw new Error(`Error ${res.status}`)
+      const data = await res.json()
+      setConvMsgs(data.conversaciones ?? [])
+    } catch (e: any) {
+      setConvError("No se pudo cargar la conversación")
+    } finally {
+      setConvLoading(false)
+    }
+  }
     const saveVisit = async () => {
       if (!selectedLead) return;
       const fechaHora = `${visitDate}T${visitTime}:00-05:00`;
@@ -281,9 +309,10 @@ export function Contactos() {
                   <TableCell>{lead.lastContact}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Dialog>
+                      {/* --- VER CONVERSACIÓN (API real) --- */}
+                      <Dialog open={convOpen} onOpenChange={setConvOpen}>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => openConversation(lead)}>
                             <MessageCircle className="w-4 h-4" />
                           </Button>
                         </DialogTrigger>
@@ -291,37 +320,40 @@ export function Contactos() {
                           <DialogHeader>
                             <DialogTitle>Conversación con {lead.name}</DialogTitle>
                           </DialogHeader>
-                          <div className="space-y-4 max-h-96 overflow-y-auto">
-                            <div className="bg-muted p-3 rounded-lg">
-                              <p className="text-sm">
-                                <strong>Bot:</strong> ¡Hola! Soy el asistente de School of Rock Miraflores. ¿En qué te
-                                puedo ayudar?
-                              </p>
-                              <span className="text-xs text-muted-foreground">14:30</span>
-                            </div>
-                            {/* <div className="bg-accent/10 p-3 rounded-lg ml-8">
-                              <p className="text-sm">
-                                <strong>{lead.name}:</strong> Hola, me interesa información sobre clases de{" "}
-                                {lead.interest.toLowerCase()}
-                              </p>
-                              <span className="text-xs text-muted-foreground">14:32</span>
-                            </div> */}
-                            <div className="bg-muted p-3 rounded-lg">
-                              <p className="text-sm">
-                                <strong>Bot:</strong> ¡Excelente! Te puedo ayudar con eso. ¿Podrías decirme en qué
-                                distrito vives?
-                              </p>
-                              <span className="text-xs text-muted-foreground">14:33</span>
-                            </div>
-                            <div className="bg-accent/10 p-3 rounded-lg ml-8">
-                              <p className="text-sm">
-                                <strong>{lead.name}:</strong> Vivo en {lead.district}
-                              </p>
-                              <span className="text-xs text-muted-foreground">14:35</span>
-                            </div>
+
+                          <div className="space-y-3 max-h-96 overflow-y-auto">
+                            {convLoading && <p className="text-sm text-muted-foreground">Cargando…</p>}
+                            {convError && <p className="text-sm text-red-600">{convError}</p>}
+
+                            {!convLoading && !convError && convMsgs.map((m) => {
+                              const isUser = m.from === "usuario"; // sender=true => usuario (contacto)
+                              return (
+                                <div key={m.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                                  <div
+                                    className={`max-w-[75%] rounded-lg px-3 py-2
+                                      ${isUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}
+                                    `}
+                                  >
+                                    <p className="text-sm whitespace-pre-wrap">
+                                      <strong className="mr-1">{isUser ? "Contacto" : "Bot"}:</strong>
+                                      {m.text}
+                                    </p>
+                                    <span className={`block mt-1 text-[10px] opacity-70 ${isUser ? "text-primary-foreground" : "text-muted-foreground"}`}>
+                                      {m.fechaTexto}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {!convLoading && !convError && convMsgs.length === 0 && (
+                              <p className="text-sm text-muted-foreground">Sin mensajes.</p>
+                            )}
                           </div>
+
                         </DialogContent>
                       </Dialog>
+
                       <Button size="sm" variant="outline" onClick={() => handleCallAction(lead)}>
                         <Phone className="w-4 h-4" />
                       </Button>
