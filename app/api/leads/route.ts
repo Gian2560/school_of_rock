@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// Función helper para convertir BigInt a string
-function serializeBigInt(obj: any): any {
-  return JSON.parse(JSON.stringify(obj, (key, value) =>
-    typeof value === 'bigint' ? value.toString() : value
-  ));
-}
+// // Función helper para convertir BigInt a string
+// function serializeBigInt(obj: any): any {
+//   return JSON.parse(JSON.stringify(obj, (key, value) =>
+//     typeof value === 'bigint' ? value.toString() : value
+//   ));
+// }
 
 // GET: obtener todos los leads
 export async function GET() {
@@ -65,7 +65,7 @@ export async function GET() {
       canal_ultimo: lead.canal_ultimo
     }));
 
-    const serializedLeads = serializeBigInt(transformedLeads);
+    const serializedLeads = transformedLeads;
     console.log('Fetched leads:', serializedLeads);
     return NextResponse.json(serializedLeads);
   } catch (error) {
@@ -80,11 +80,11 @@ export async function POST(request: Request) {
     const data = await request.json();
     
     // Convertir strings a BigInt para campos que lo requieren
-    if (data.id_sede) data.id_sede = BigInt(data.id_sede);
-    if (data.id_contacto) data.id_contacto = BigInt(data.id_contacto);
+    // if (data.id_sede) data.id_sede = BigInt(data.id_sede);
+    // if (data.id_contacto) data.id_contacto = BigInt(data.id_contacto);
     
     const lead = await prisma.lead.create({ data });
-    const serializedLead = serializeBigInt(lead);
+    const serializedLead = lead;
     return NextResponse.json(serializedLead);
   } catch (error) {
     console.error('Error creating lead:', error);
