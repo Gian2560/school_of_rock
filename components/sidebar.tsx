@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { BarChart3, Users, CheckSquare, CalendarIcon, Megaphone, LogOut, Music } from "lucide-react"
-
+import { signOut, useSession } from "next-auth/react";
 interface SidebarProps {
   activeSection: string
   onSectionChange: (section: string) => void
@@ -17,6 +17,9 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
     { id: "calendar", label: "Calendario", icon: CalendarIcon },
     { id: "campaigns", label: "Campañas", icon: Megaphone },
   ]
+const handleLogout = () => {
+    signOut({ callbackUrl: "/login" }); // Cierra sesión y redirige al login
+  };
 
   return (
     <div className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -58,6 +61,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
         <Button
+          onClick={handleLogout}
           variant="ghost"
           className="w-full justify-start gap-3 h-12 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
