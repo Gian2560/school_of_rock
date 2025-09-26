@@ -22,6 +22,11 @@ export async function GET() {
         distrito: true,
         estado: true,
         fecha_creacion: true,
+        accion_comercial: {
+          orderBy: { fecha_accion: 'desc' },
+          take: 1,
+          select: { estado: true }
+        }
       },
       orderBy: {
         fecha_creacion: 'desc'
@@ -39,6 +44,7 @@ export async function GET() {
       telefono: contacto.telefono || '',
       correo: contacto.correo || '',
       fecha_creacion: contacto.fecha_creacion,
+      estado_accion_comercial: contacto.accion_comercial?.[0]?.estado ?? null,
     }));
 
     const serializedContactos = transformedContactos;

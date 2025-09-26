@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useToast } from "@/hooks/use-toast"
+// import { Toaster } from "@/components/ui/toaster"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -61,6 +63,7 @@ function useContactos() {
             district: contacto.distrito || '',
             phone: contacto.telefono || '',
             correo: contacto.correo || '',
+            estado_accion_comercial: contacto.estado_accion_comercial || '',
             fecha_creacion: contacto.fecha_creacion,
           lastContact: new Date(contacto.fecha_creacion).toLocaleDateString('es-ES'),
           // Mantener datos originales para referencia
@@ -92,6 +95,8 @@ export function Contactos() {
   const [creditScore, setCreditScore] = useState("")
   const [dni, setDni] = useState("")
   const [interestLevel, setInterestLevel] = useState("")
+
+  const { toast } = useToast()
 
 // ---- NUEVOS estados para conversación ----
   const [convOpen, setConvOpen] = useState(false)
@@ -136,6 +141,26 @@ export function Contactos() {
         return "bg-gray-100 text-gray-800"
     }
 }
+const getStatusAsesorColor = (estado_accion_comercial: string) => {
+    switch (estado_accion_comercial) {
+      case "No contesta":
+        return "bg-blue-100 text-blue-800"
+      case "Volver a contactar":
+        return "bg-yellow-100 text-yellow-800"
+      case "Visita agendada":
+        return "bg-green-100 text-green-800"
+      case "Linea ocupada":
+        return "bg-purple-100 text-purple-800"
+      case "En seguimiento":
+        return "bg-orange-100 text-orange-800"
+      case "Enrolado":
+        return "bg-emerald-100 text-emerald-800"
+      case "No interesado":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+}
     const filteredLeads = leadsData.filter((lead) => {
     const matchesSearch =
       lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,23 +192,42 @@ export function Contactos() {
     const saveVisit = async () => {
       if (!selectedLead) return;
       const fechaHora = `${visitDate}T${visitTime}:00-05:00`;
-      await fetch("/api/contactos/cita", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id_contacto: selectedLead.id_contacto,
-          fechaHora, // solo este campo
-          notas: visitNotes,
-        }),
-      });
+      try {
+        const res = await fetch("/api/contactos/cita", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id_contacto: selectedLead.id_contacto,
+            fechaHora, // solo este campo
+            notas: visitNotes,
+          }),
+        });
+        if (res.ok) {
+          console.log("Toast disparado: cita agendada con éxito");
+          toast({
+            title: "Cita agendada con éxito",
+            description: `La cita para ${selectedLead.name} fue registrada correctamente.`,
+            variant: "success"
+          });
+        } else {
+          console.log("Toast disparado: error al agendar cita");
+          toast({
+            title: "Error al agendar cita",
+            description: "No se pudo registrar la cita. Intenta nuevamente.",
+            variant: "destructive"
+          });
+        }
+      } catch (err) {
+        console.log("Toast disparado: error de red");
+        toast({
+          title: "Error de red",
+          description: "No se pudo conectar con el servidor.",
+          variant: "destructive"
+        });
+      }
       setVisitModalOpen(false);
       setSelectedLead(null);
     }
-//       lead.correo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-//       lead.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-//     const matchesSegment = filterSegment === "all" || lead.segment === filterSegment
-//     return matchesSearch && matchesSegment
-  
 
   const totalPages = Math.ceil(filteredLeads.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -218,16 +262,43 @@ export function Contactos() {
   }
 
   const saveCall = () => {
-    // Aquí podrías hacer un POST a la API para guardar la llamada
-    setCallModalOpen(false)
-    setSelectedLead(null)
+    // Registrar acción comercial solo para ciertos resultados
+    if (["No contesta", "Volver a contactar", "Linea ocupada", "No interesado"].includes(callResult)) {
+      fetch("/api/contactos/accion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id_contacto: selectedLead.id_contacto,
+          estado: callResult,
+          nota: callNotes,
+        }),
+      })
+      .then(res => {
+        if (res.ok) {
+          toast({
+            title: "Acción comercial registrada",
+            description: `La llamada (${callResult}) fue registrada correctamente.`,
+            variant: "success"
+          });
+        } else {
+          toast({
+            title: "Error al registrar llamada",
+            description: "No se pudo guardar la acción comercial.",
+            variant: "destructive"
+          });
+        }
+      })
+      .catch(() => {
+        toast({
+          title: "Error de red",
+          description: "No se pudo conectar con el servidor.",
+          variant: "destructive"
+        });
+      });
+    }
+    setCallModalOpen(false);
+    setSelectedLead(null);
   }
-
-//   const saveVisit = () => {
-//     // Aquí podrías hacer un POST a la API para guardar la visita
-//     setVisitModalOpen(false)
-//     setSelectedLead(null)
-//   }
 
   const saveCredit = () => {
     // Aquí podrías hacer un POST a la API para guardar el score
@@ -253,7 +324,7 @@ export function Contactos() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
-            placeholder="Buscar leads..."
+            placeholder="Buscar contactos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -286,7 +357,7 @@ export function Contactos() {
                 <TableHead>Estado</TableHead>
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Distrito</TableHead>
-                {/* <TableHead>Interés</TableHead> */}
+                <TableHead>Estado asesor</TableHead>
                 <TableHead>Último Contacto</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -305,7 +376,11 @@ export function Contactos() {
                   </TableCell>
                   <TableCell>{lead.phone}</TableCell>
                   <TableCell>{lead.district}</TableCell>
-                  {/* <TableCell>{lead.interest}</TableCell> */}
+                  <TableCell>
+                    <Badge variant="outline" className={getStatusAsesorColor(lead.estado_accion_comercial)}>
+                      {lead.estado_accion_comercial}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{lead.lastContact}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
@@ -422,14 +497,14 @@ export function Contactos() {
               <Calendar className="w-4 h-4 mr-2" />
               Visita agendada
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+            {/* <Button className="bg-blue-600 hover:bg-blue-700 text-white">
               <UserCheck className="w-4 h-4 mr-2" />
               Clase de prueba
             </Button>
             <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <UserCheck className="w-4 h-4 mr-2" />
               Enrolado
-            </Button>
+            </Button> */}
             <Button variant="outline">
               <RotateCcw className="w-4 h-4 mr-2" />
               Volver a contactar
@@ -455,12 +530,12 @@ export function Contactos() {
                   <SelectValue placeholder="Seleccionar resultado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="contactado">Contactado exitosamente</SelectItem>
-                  <SelectItem value="no-contesta">No contesta</SelectItem>
-                  <SelectItem value="ocupado">Línea ocupada</SelectItem>
-                  <SelectItem value="interesado">Mostró interés</SelectItem>
-                  <SelectItem value="no-interesado">No interesado</SelectItem>
-                  <SelectItem value="reagendar">Solicita reagendar</SelectItem>
+                  {/* <SelectItem value="contactado">Contactado exitosamente</SelectItem> */}
+                  <SelectItem value="No contesta">No contesta</SelectItem>
+                  <SelectItem value="Linea ocupada">Línea ocupada</SelectItem>
+                  <SelectItem value="Volver a contactar">Volver a contactar</SelectItem>
+                  <SelectItem value="No interesado">No interesado</SelectItem>
+                  {/* <SelectItem value="reagendar">Solicita reagendar</SelectItem> */}
                 </SelectContent>
               </Select>
             </div>

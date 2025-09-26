@@ -262,7 +262,7 @@ export function Leads() {
                   <TableCell>{lead.lastContact}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Dialog>
+                      {/* <Dialog>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm">
                             <MessageCircle className="w-4 h-4" />
@@ -302,7 +302,7 @@ export function Leads() {
                             </div>
                           </div>
                         </DialogContent>
-                      </Dialog>
+                      </Dialog> */}
                       <Button size="sm" variant="outline" onClick={() => handleCallAction(lead)}>
                         <Phone className="w-4 h-4" />
                       </Button>
@@ -367,10 +367,10 @@ export function Leads() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <Button className="bg-green-600 hover:bg-green-700 text-white">
+            {/* <Button className="bg-green-600 hover:bg-green-700 text-white">
               <Calendar className="w-4 h-4 mr-2" />
               Visita agendada
-            </Button>
+            </Button> */}
             <Button className="bg-blue-600 hover:bg-blue-700 text-white">
               <UserCheck className="w-4 h-4 mr-2" />
               Clase de prueba
@@ -379,14 +379,14 @@ export function Leads() {
               <UserCheck className="w-4 h-4 mr-2" />
               Enrolado
             </Button>
-            <Button variant="outline">
+            {/* <Button variant="outline">
               <RotateCcw className="w-4 h-4 mr-2" />
               Volver a contactar
             </Button>
             <Button variant="destructive">
               <UserX className="w-4 h-4 mr-2" />
               No interesado
-            </Button>
+            </Button> */}
           </div>
         </CardContent>
       </Card>
@@ -394,27 +394,27 @@ export function Leads() {
       <Dialog open={callModalOpen} onOpenChange={setCallModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Registrar Llamada - {selectedLead?.name}</DialogTitle>
+            <DialogTitle>Acción Comercial - {selectedLead?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="call-result">Resultado de la llamada</Label>
+              <Label htmlFor="call-result">Resultado de la acción comercial</Label>
               <Select value={callResult} onValueChange={setCallResult}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar resultado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="contactado">Contactado exitosamente</SelectItem>
-                  <SelectItem value="no-contesta">No contesta</SelectItem>
-                  <SelectItem value="ocupado">Línea ocupada</SelectItem>
+                  <SelectItem value="Enrolado">Enrolado</SelectItem>
+                  <SelectItem value="Clase de prueba">Clase de prueba</SelectItem>
+                  {/* <SelectItem value="ocupado">Línea ocupada</SelectItem>
                   <SelectItem value="interesado">Mostró interés</SelectItem>
                   <SelectItem value="no-interesado">No interesado</SelectItem>
-                  <SelectItem value="reagendar">Solicita reagendar</SelectItem>
+                  <SelectItem value="reagendar">Solicita reagendar</SelectItem> */}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="call-notes">Notas de la llamada</Label>
+              <Label htmlFor="call-notes">Notas</Label>
               <Textarea
                 id="call-notes"
                 placeholder="Escribe las notas de la conversación..."
