@@ -591,7 +591,7 @@ export function TaskCenter() {
                           <Calendar className="w-4 h-4" />
                         </Button>
                         
-                        <Button 
+                        {/* <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => {
@@ -600,7 +600,7 @@ export function TaskCenter() {
                           }}
                         >
                           <FileText className="w-4 h-4" />
-                        </Button>
+                        </Button> */}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -626,8 +626,8 @@ export function TaskCenter() {
                     <SelectValue placeholder="Seleccionar resultado" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="No contesta">No contesta</SelectItem>
-                    <SelectItem value="Linea ocupada">Línea ocupada</SelectItem>
+                    {/* <SelectItem value="No contesta">No contesta</SelectItem>
+                    <SelectItem value="Linea ocupada">Línea ocupada</SelectItem> */}
                     <SelectItem value="Volver a contactar">Volver a contactar</SelectItem>
                     <SelectItem value="No interesado">No interesado</SelectItem>
                   </SelectContent>
@@ -709,7 +709,7 @@ export function TaskCenter() {
         </Dialog>
 
         {/* Modal de Variables */}
-        <Dialog open={creditModalOpen} onOpenChange={setCreditModalOpen}>
+        {/* <Dialog open={creditModalOpen} onOpenChange={setCreditModalOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Registrar Variables - {selectedLead?.leadName}</DialogTitle>
@@ -762,7 +762,7 @@ export function TaskCenter() {
               </div>
             </div>
           </DialogContent>
-        </Dialog>
+        </Dialog> */}
       </div>
     )
   }
