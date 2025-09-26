@@ -48,11 +48,10 @@ function mapEtapaToStatus(etapa: string) {
 // Hook para obtener los leads desde la API
 function useLeads() {
   const [leads, setLeads] = useState<any[]>([])
-  useEffect(() => {
+  const fetchLeads = () => {
     fetch("/api/leads")
       .then((res) => res.json())
       .then((data) => {
-        // Mapear los datos de la API al formato esperado por el componente
         const mappedLeads = data.map((lead: any) => ({
           id: lead.id,
           name: `${lead.nombre} ${lead.apellidos}`.trim(),
@@ -61,17 +60,16 @@ function useLeads() {
           status: mapEtapaToStatus(lead.etapa),
           phone: lead.telefono || 'Sin teléfono',
           district: lead.distrito || 'Sin distrito',
-          interest: lead.interes, // Puedes ajustar esto según tus datos
+          interest: lead.interes,
           lastContact: new Date(lead.ultima_interaccion || lead.fecha_creacion).toLocaleDateString('es-ES'),
           estado_accion_comercial: lead.estado_accion_comercial || '',
-          // Mantener datos originales para referencia
           originalData: lead
         }))
         setLeads(mappedLeads)
       })
-  }, [])
-  console.log("Leads data:", leads)
-  return leads
+  }
+  useEffect(fetchLeads, [])
+  return { leads, reload: fetchLeads }
 }
 
 
@@ -157,7 +155,7 @@ export function Leads() {
     }
 }
 
-  const filteredLeads = leadsData.filter((lead) => {
+  const filteredLeads = leadsData.leads.filter((lead) => {
     const matchesSearch =
       lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -214,9 +212,10 @@ export function Leads() {
         if (res.ok) {
           toast({
             title: "Acción comercial registrada",
-            description: 'La acción (${callResult}) fue registrada correctamente.',
+            description: `La acción (${callResult}) fue registrada correctamente.`,
             variant: "success"
           });
+          leadsData.reload();
         } else {
           toast({
             title: "Error al registrar acción",

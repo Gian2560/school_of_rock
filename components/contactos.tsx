@@ -49,8 +49,8 @@ function mapEtapaToStatus(etapa: string) {
 }
 // Hook para obtener los leads desde la API
 function useContactos() {
-  const [contactos, setContactos] = useState<any[]>([])
-  useEffect(() => {
+  const [contactos, setContactos] = useState<any[]>([]);
+  const fetchContactos = () => {
     fetch("/api/contactos")
       .then((res) => res.json())
       .then((data) => {
@@ -69,11 +69,36 @@ function useContactos() {
           // Mantener datos originales para referencia
           originalData: contacto
         }))
-        setContactos(mappedContactos)
-      })
-  }, [])
-  console.log("Leads data:", contactos)
-  return contactos
+        setContactos(mappedContactos);
+      });
+  };
+  useEffect(fetchContactos, []);
+  return { contactos, reload: fetchContactos };
+  // const [contactos, setContactos] = useState<any[]>([])
+  // useEffect(() => {
+  //   fetch("/api/contactos")
+  //     .then((res) => res.json())
+  //     .then((data) => {
+  //       // Mapear los datos de la API al formato esperado por el componente
+  //       const mappedContactos = data.map((contacto: any) => ({
+  //         id_contacto: contacto.id_contacto,
+  //         name: `${contacto.nombres} ${contacto.apellidos}`.trim(),
+  //         segment: contacto.segmento || '',
+  //           status: contacto.estado,
+  //           district: contacto.distrito || '',
+  //           phone: contacto.telefono || '',
+  //           correo: contacto.correo || '',
+  //           estado_accion_comercial: contacto.estado_accion_comercial || '',
+  //           fecha_creacion: contacto.fecha_creacion,
+  //         lastContact: new Date(contacto.fecha_creacion).toLocaleDateString('es-ES'),
+  //         // Mantener datos originales para referencia
+  //         originalData: contacto
+  //       }))
+  //       setContactos(mappedContactos)
+  //     })
+  // }, [])
+  // console.log("Leads data:", contactos)
+  // return contactos
 }
 
 
@@ -106,7 +131,7 @@ export function Contactos() {
     { id: string; text: string; from: "bot" | "usuario"; fechaTexto: string }[]
   >([])
 
-  const leadsData = useContactos()
+  const {contactos, reload} = useContactos()
 
   const getSegmentColor = (segment: string) => {
     switch (segment) {
@@ -161,14 +186,14 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
         return "bg-gray-100 text-gray-800"
     }
 }
-    const filteredLeads = leadsData.filter((lead) => {
-    const matchesSearch =
-      lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.correo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSegment = filterSegment === "all" || lead.segment === filterSegment
-    return matchesSearch && matchesSegment
-  })
+    const filteredLeads = contactos.filter((lead) => {
+      const matchesSearch =
+        lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.correo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.phone?.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesSegment = filterSegment === "all" || lead.segment === filterSegment
+      return matchesSearch && matchesSegment
+    })
 
   // ----- NUEVO: cargar conversación -----
   const openConversation = async (lead: any) => {
@@ -202,6 +227,7 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
             notas: visitNotes,
           }),
         });
+        reload();
         if (res.ok) {
           console.log("Toast disparado: cita agendada con éxito");
           toast({
@@ -227,6 +253,7 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
       }
       setVisitModalOpen(false);
       setSelectedLead(null);
+      reload();
     }
 
   const totalPages = Math.ceil(filteredLeads.length / itemsPerPage)
@@ -274,6 +301,7 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
         }),
       })
       .then(res => {
+        reload();
         if (res.ok) {
           toast({
             title: "Acción comercial registrada",
@@ -298,6 +326,7 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
     }
     setCallModalOpen(false);
     setSelectedLead(null);
+    
   }
 
   const saveCredit = () => {
@@ -531,8 +560,8 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
                 </SelectTrigger>
                 <SelectContent>
                   {/* <SelectItem value="contactado">Contactado exitosamente</SelectItem> */}
-                  <SelectItem value="No contesta">No contesta</SelectItem>
-                  <SelectItem value="Linea ocupada">Línea ocupada</SelectItem>
+                  {/* <SelectItem value="No contesta">No contesta</SelectItem>
+                  <SelectItem value="Linea ocupada">Línea ocupada</SelectItem> */}
                   <SelectItem value="Volver a contactar">Volver a contactar</SelectItem>
                   <SelectItem value="No interesado">No interesado</SelectItem>
                   {/* <SelectItem value="reagendar">Solicita reagendar</SelectItem> */}
