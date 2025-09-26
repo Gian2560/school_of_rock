@@ -297,7 +297,7 @@ export function Leads() {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Segmento</TableHead>
-                <TableHead>Estado</TableHead>
+                {/* <TableHead>Estado</TableHead> */}
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Distrito</TableHead>
                 <TableHead>Interés</TableHead>
@@ -313,11 +313,11 @@ export function Leads() {
                   <TableCell>
                     <Badge className={getSegmentColor(lead.segment)}>{lead.segment}</Badge>
                   </TableCell>
-                  <TableCell>
+                  {/* <TableCell>
                     <Badge variant="outline" className={getStatusColor(lead.status)}>
                       {lead.status}
                     </Badge>
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell>{lead.phone}</TableCell>
                   <TableCell>{lead.district}</TableCell>
                   <TableCell>{lead.interest}</TableCell>
@@ -376,9 +376,9 @@ export function Leads() {
                       {/* <Button size="sm" variant="outline" onClick={() => handleVisitAction(lead)}>
                         <Calendar className="w-4 h-4" />
                       </Button> */}
-                      <Button size="sm" variant="outline" onClick={() => handleCreditAction(lead)}>
+                      {/* <Button size="sm" variant="outline" onClick={() => handleCreditAction(lead)}>
                         <FileText className="w-4 h-4" />
-                      </Button>
+                      </Button> */}
                     </div>
                   </TableCell>
                 </TableRow>
