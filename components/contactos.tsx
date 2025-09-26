@@ -150,7 +150,7 @@ export function Contactos() {
     switch (status) {
       case "Nuevo":
         return "bg-blue-100 text-blue-800"
-      case "Contactado":
+      case "Llamada agendada":
         return "bg-yellow-100 text-yellow-800"
       case "Visita agendada":
         return "bg-green-100 text-green-800"
