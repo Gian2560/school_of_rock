@@ -63,6 +63,7 @@ function useLeads() {
           district: lead.distrito || 'Sin distrito',
           interest: lead.interes, // Puedes ajustar esto según tus datos
           lastContact: new Date(lead.ultima_interaccion || lead.fecha_creacion).toLocaleDateString('es-ES'),
+          estado_accion_comercial: lead.estado_accion_comercial || '',
           // Mantener datos originales para referencia
           originalData: lead
         }))
@@ -75,6 +76,13 @@ function useLeads() {
 
 
 export function Leads() {
+  // Toast para notificaciones
+  // Si tienes un hook useToast, importa y úsalo aquí
+  let toast: any = () => {};
+  try {
+    // @ts-ignore
+    toast = require("@/hooks/use-toast").useToast().toast;
+  } catch {}
   const [searchTerm, setSearchTerm] = useState("")
   const [filterSegment, setFilterSegment] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
@@ -128,6 +136,26 @@ export function Leads() {
         return "bg-gray-100 text-gray-800"
     }
   }
+  const getStatusAsesorColor = (estado_accion_comercial: string) => {
+    switch (estado_accion_comercial) {
+      // case "No contesta":
+      //   return "bg-blue-100 text-blue-800"
+      // case "Volver a contactar":
+      //   return "bg-yellow-100 text-yellow-800"
+      // case "Visita agendada":
+      //   return "bg-green-100 text-green-800"
+      case "Clase de prueba":
+        return "bg-blue-500 text-white"
+      // case "En seguimiento":
+      //   return "bg-orange-100 text-orange-800"
+      case "Enrolado":
+        return "bg-orange-500 text-white"
+      // case "No interesado":
+      //   return "bg-red-100 text-red-800"
+      // default:
+      //   return "bg-gray-100 text-gray-800"
+    }
+}
 
   const filteredLeads = leadsData.filter((lead) => {
     const matchesSearch =
@@ -171,9 +199,42 @@ export function Leads() {
   }
 
   const saveCall = () => {
-    // Aquí podrías hacer un POST a la API para guardar la llamada
-    setCallModalOpen(false)
-    setSelectedLead(null)
+    // Registrar acción comercial solo para ciertos resultados
+    if (["Enrolado", "Clase de prueba"].includes(callResult)) {
+      fetch("/api/leads/accion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id_lead: selectedLead.id,
+          estado: callResult,
+          nota: callNotes,
+        }),
+      })
+      .then(res => {
+        if (res.ok) {
+          toast({
+            title: "Acción comercial registrada",
+            description: 'La acción (${callResult}) fue registrada correctamente.',
+            variant: "success"
+          });
+        } else {
+          toast({
+            title: "Error al registrar acción",
+            description: "No se pudo guardar la acción comercial.",
+            variant: "destructive"
+          });
+        }
+      })
+      .catch(() => {
+        toast({
+          title: "Error de red",
+          description: "No se pudo conectar con el servidor.",
+          variant: "destructive"
+        });
+      });
+    }
+    setCallModalOpen(false);
+    setSelectedLead(null);
   }
 
   const saveVisit = () => {
@@ -241,6 +302,7 @@ export function Leads() {
                 <TableHead>Distrito</TableHead>
                 <TableHead>Interés</TableHead>
                 <TableHead>Último Contacto</TableHead>
+                <TableHead>Estado Asesor</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -260,6 +322,11 @@ export function Leads() {
                   <TableCell>{lead.district}</TableCell>
                   <TableCell>{lead.interest}</TableCell>
                   <TableCell>{lead.lastContact}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={getStatusAsesorColor(lead.estado_accion_comercial)}>
+                      {lead.estado_accion_comercial}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       {/* <Dialog>
@@ -306,9 +373,9 @@ export function Leads() {
                       <Button size="sm" variant="outline" onClick={() => handleCallAction(lead)}>
                         <Phone className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleVisitAction(lead)}>
+                      {/* <Button size="sm" variant="outline" onClick={() => handleVisitAction(lead)}>
                         <Calendar className="w-4 h-4" />
-                      </Button>
+                      </Button> */}
                       <Button size="sm" variant="outline" onClick={() => handleCreditAction(lead)}>
                         <FileText className="w-4 h-4" />
                       </Button>
@@ -428,14 +495,14 @@ export function Leads() {
                 Cancelar
               </Button>
               <Button onClick={saveCall} disabled={!callResult}>
-                Guardar Llamada
+                Guardar Accion Comercial
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={visitModalOpen} onOpenChange={setVisitModalOpen}>
+      {/* <Dialog open={visitModalOpen} onOpenChange={setVisitModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Agendar Visita - {selectedLead?.name}</DialogTitle>
@@ -485,7 +552,7 @@ export function Leads() {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       <Dialog open={creditModalOpen} onOpenChange={setCreditModalOpen}>
         <DialogContent className="max-w-md">

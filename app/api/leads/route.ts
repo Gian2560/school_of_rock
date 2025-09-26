@@ -35,6 +35,11 @@ export async function GET() {
             telefono: true,
             correo: true
           }
+        },
+        accion_comercial: {
+          orderBy: { fecha_accion: 'desc' },
+          take: 1,
+          select: { estado: true }
         }
       },
       orderBy: {
@@ -62,7 +67,8 @@ export async function GET() {
       colegio: lead.colegio,
       precio_confirmado: lead.precio_confirmado,
       canal_primero: lead.canal_primero,
-      canal_ultimo: lead.canal_ultimo
+      canal_ultimo: lead.canal_ultimo,
+      estado_accion_comercial: lead.accion_comercial?.[0]?.estado ?? null,
     }));
 
     const serializedLeads = transformedLeads;
