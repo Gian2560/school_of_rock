@@ -13,7 +13,7 @@ model accion_comercial {
   id_contacto         Int?
   id_lead             Int?
   id_cita             Int?
-  asesor_id           Int       @unique
+  asesor_id           Int
   estado              String?   @db.VarChar(30)
   fecha_accion        DateTime? @default(now()) @db.Timestamp(6)
   nota                String
@@ -84,6 +84,7 @@ model contacto {
   extra            Json?
   segmento         String?            @db.VarChar(50)
   fecha_creacion   DateTime           @default(now()) @db.Timestamp(6)
+  prioridad        Int?
   accion_comercial accion_comercial[]
   cita             cita[]
   lead             lead[]
@@ -167,14 +168,14 @@ model lead_instrumento {
 }
 
 model persona {
-  id_persona       Int               @id @default(autoincrement())
-  id_usuario       Int               @unique
-  nombres          String            @db.VarChar(120)
-  apellidos        String            @db.VarChar(120)
-  celular          String?           @db.VarChar(12)
-  num_leads        Int?              @default(0)
-  accion_comercial accion_comercial?
-  usuario          usuario           @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  id_persona       Int                @id @default(autoincrement())
+  id_usuario       Int                @unique
+  nombres          String             @db.VarChar(120)
+  apellidos        String             @db.VarChar(120)
+  celular          String?            @db.VarChar(12)
+  num_leads        Int?               @default(0)
+  accion_comercial accion_comercial[]
+  usuario          usuario            @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model rol {
