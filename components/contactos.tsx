@@ -435,9 +435,9 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
                       <Button size="sm" variant="outline" onClick={() => handleVisitAction(lead)}>
                         <Calendar className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleCreditAction(lead)}>
+                      {/* <Button size="sm" variant="outline" onClick={() => handleCreditAction(lead)}>
                         <FileText className="w-4 h-4" />
-                      </Button>
+                      </Button> */}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -613,7 +613,7 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={creditModalOpen} onOpenChange={setCreditModalOpen}>
+      {/* <Dialog open={creditModalOpen} onOpenChange={setCreditModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Registrar Variables - {selectedLead?.name}</DialogTitle>
@@ -666,7 +666,7 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
     </div>
   )
