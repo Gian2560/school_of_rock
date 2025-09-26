@@ -13,14 +13,16 @@ model accion_comercial {
   id_contacto         Int?
   id_lead             Int?
   id_cita             Int?
-  asesor_id           Int       @unique
+  asesor_id           Int
   estado              String?   @db.VarChar(30)
   fecha_accion        DateTime? @default(now()) @db.Timestamp(6)
   nota                String
+  id_tarea            Int?
   persona             persona   @relation(fields: [asesor_id], references: [id_persona], onDelete: Cascade, onUpdate: NoAction)
   cita                cita?     @relation(fields: [id_cita], references: [id_cita], onDelete: Cascade, onUpdate: NoAction)
   contacto            contacto? @relation(fields: [id_contacto], references: [id_contacto], onDelete: Cascade, onUpdate: NoAction)
   lead                lead?     @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade, onUpdate: NoAction)
+  tarea               tarea?    @relation(fields: [id_tarea], references: [id_tarea], onDelete: Cascade, onUpdate: NoAction, map: "fk_accion_comercial_tarea")
 }
 
 model campanha {
@@ -84,10 +86,12 @@ model contacto {
   extra            Json?
   segmento         String?            @db.VarChar(50)
   fecha_creacion   DateTime           @default(now()) @db.Timestamp(6)
+  prioridad        Int?
   accion_comercial accion_comercial[]
   cita             cita[]
   lead             lead[]
   lead_contacto    lead_contacto[]
+  tarea            tarea[]
 }
 
 model historico_contacto_estado {
@@ -167,14 +171,14 @@ model lead_instrumento {
 }
 
 model persona {
-  id_persona       Int               @id @default(autoincrement())
-  id_usuario       Int               @unique
-  nombres          String            @db.VarChar(120)
-  apellidos        String            @db.VarChar(120)
-  celular          String?           @db.VarChar(12)
-  num_leads        Int?              @default(0)
-  accion_comercial accion_comercial?
-  usuario          usuario           @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  id_persona       Int                @id @default(autoincrement())
+  id_usuario       Int                @unique
+  nombres          String             @db.VarChar(120)
+  apellidos        String             @db.VarChar(120)
+  celular          String?            @db.VarChar(12)
+  num_leads        Int?               @default(0)
+  accion_comercial accion_comercial[]
+  usuario          usuario            @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model rol {
@@ -213,4 +217,15 @@ model usuario {
   fecha_creacion DateTime @default(now()) @db.Timestamp(6)
   persona        persona?
   rol            rol?     @relation(fields: [id_rol], references: [id_rol], onUpdate: NoAction)
+}
+
+model tarea {
+  id_tarea            Int                @id @default(autoincrement())
+  id_contacto         Int
+  estado_bot          String?            @db.VarChar(50)
+  fecha_creacion      DateTime?          @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime?          @default(now()) @db.Timestamp(6)
+  estado_tarea        String?            @db.VarChar(50)
+  accion_comercial    accion_comercial[]
+  contacto            contacto           @relation(fields: [id_contacto], references: [id_contacto], onDelete: NoAction, onUpdate: NoAction)
 }
