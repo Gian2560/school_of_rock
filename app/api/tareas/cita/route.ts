@@ -71,8 +71,8 @@ export async function POST(request: Request) {
 
     // Registrar acción comercial asociada
     await prisma.$queryRaw`
-      INSERT INTO accion_comercial (tipo_accion, id_tarea, id_cita, asesor_id, estado, fecha_accion, nota)
-      VALUES ('visita', ${id_tarea}, ${cita[0].id_cita}, 1, 'Visita agendada', NOW(), ${`Cita agendada para ${fechaHora}. ${notas || ''}`})
+      INSERT INTO accion_comercial (tipo_accion, id_tarea, id_cita, id_contacto,asesor_id, estado, fecha_accion, nota)
+      VALUES ('visita', ${id_tarea}, ${cita[0].id_cita}, ${tarea.id_contacto}, 1, 'Visita agendada', NOW(), ${`Cita agendada para ${fechaHora}. ${notas || ''}`})
     `
 
     console.log("✅ Cita agendada desde tarea:", cita[0])
