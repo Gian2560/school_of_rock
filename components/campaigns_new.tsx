@@ -208,8 +208,8 @@ export default function Campaigns() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombre: newTemplate.name,
-          mensaje: newTemplate.message
+          nombre_template: newTemplate.name,
+          mensaje_template: newTemplate.message
         })
       })
 
@@ -574,7 +574,7 @@ export default function Campaigns() {
                     <SelectContent>
                       {campanas.map((campana) => (
                         <SelectItem key={campana.id} value={campana.id.toString()}>
-                          {campana.name}
+                          {campana.nombre_campanha}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -656,7 +656,7 @@ export default function Campaigns() {
                     <SelectContent>
                       {templates.map((template) => (
                         <SelectItem key={template.id} value={template.id.toString()}>
-                          {template.name}
+                          {template.nombre_template}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -665,7 +665,7 @@ export default function Campaigns() {
                     <div className="mt-2 p-3 bg-muted rounded-md">
                       <p className="text-sm text-muted-foreground">Vista previa del mensaje:</p>
                       <p className="text-sm mt-1">
-                        {templates.find(t => t.id.toString() === newCampaign.selectedTemplate)?.message}
+                        {templates.find(t => t.id.toString() === newCampaign.selectedTemplate)?.mensaje_template}
                       </p>
                     </div>
                   )}
@@ -697,35 +697,35 @@ export default function Campaigns() {
           <Card key={campaign.id}>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                <Badge className={getStatusColor(campaign.status)}>
-                  {getStatusText(campaign.status)}
+                <CardTitle className="text-lg">{campaign.nombre_campanha}</CardTitle>
+                <Badge className={getStatusColor(campaign.estado_campanha)}>
+                  {getStatusText(campaign.estado_campanha)}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {campaign.description && (
-                <p className="text-sm text-muted-foreground">{campaign.description}</p>
+              {campaign.descripcion && (
+                <p className="text-sm text-muted-foreground">{campaign.descripcion}</p>
               )}
               
-              {campaign.template && (
+              {campaign.template_name && (
                 <div className="bg-muted p-3 rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-1">Template: {campaign.template.name}</p>
-                  <p className="text-sm">{campaign.template.message}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Template: {campaign.template_name}</p>
+                  <p className="text-sm">{campaign.template_message}</p>
                 </div>
               )}
 
               <div className="grid grid-cols-3 gap-4 pt-2">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{campaign.recipients || 0}</div>
+                  <div className="text-2xl font-bold text-primary">{campaign.total_contactos || 0}</div>
                   <p className="text-xs text-muted-foreground">Contactos</p>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{campaign.responses || 0}</div>
+                  <div className="text-2xl font-bold text-green-600">{campaign.enviados || 0}</div>
                   <p className="text-xs text-muted-foreground">Enviados</p>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{campaign.conversions || 0}</div>
+                  <div className="text-2xl font-bold text-blue-600">{campaign.respuestas || 0}</div>
                   <p className="text-xs text-muted-foreground">Respuestas</p>
                 </div>
               </div>
@@ -800,7 +800,7 @@ export default function Campaigns() {
               <Card key={template.id} className="p-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium">{template.name}</h4>
+                    <h4 className="font-medium">{template.nombre_template}</h4>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -810,7 +810,7 @@ export default function Campaigns() {
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-3">
-                    {template.message}
+                    {template.mensaje_template}
                   </p>
                 </div>
               </Card>
@@ -825,7 +825,7 @@ export default function Campaigns() {
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">
-                {campanas.filter((c: any) => c.status === 'activa').length}
+                {campanas.filter((c: any) => c.estado_campanha === 'activa').length}
               </div>
               <p className="text-sm text-muted-foreground">Campañas activas</p>
             </div>
@@ -835,7 +835,7 @@ export default function Campaigns() {
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {campanas.reduce((sum: number, c: any) => sum + (c.recipients || 0), 0)}
+                {campanas.reduce((sum: number, c: any) => sum + (c.total_contactos || 0), 0)}
               </div>
               <p className="text-sm text-muted-foreground">Total contactos</p>
             </div>
@@ -845,7 +845,7 @@ export default function Campaigns() {
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {campanas.reduce((sum: number, c: any) => sum + (c.responses || 0), 0)}
+                {campanas.reduce((sum: number, c: any) => sum + (c.enviados || 0), 0)}
               </div>
               <p className="text-sm text-muted-foreground">Mensajes enviados</p>
             </div>
@@ -856,8 +856,8 @@ export default function Campaigns() {
             <div className="text-center">
               <div className="text-2xl font-bold text-accent">
                 {(() => {
-                  const totalResponses = campanas.reduce((sum: number, c: any) => sum + (c.conversions || 0), 0)
-                  const totalSent = campanas.reduce((sum: number, c: any) => sum + (c.responses || 0), 0)
+                  const totalResponses = campanas.reduce((sum: number, c: any) => sum + (c.respuestas || 0), 0)
+                  const totalSent = campanas.reduce((sum: number, c: any) => sum + (c.enviados || 0), 0)
                   return totalSent > 0 ? Math.round((totalResponses / totalSent) * 100) : 0
                 })()}%
               </div>

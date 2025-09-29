@@ -26,11 +26,8 @@ function useCampanas() {
     fetch("/api/campanas")
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) {
-          setCampanas(data.campanas || [])
-        } else {
-          setCampanas(data || [])
-        }
+        console.log("📋 Campañas desde API:", data)
+        setCampanas(data)
         setLoading(false)
       })
       .catch((error) => {
@@ -57,11 +54,8 @@ function useTemplates() {
     fetch("/api/templates")
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) {
-          setTemplates(data.templates || [])
-        } else {
-          setTemplates(data || [])
-        }
+        console.log("📋 Templates desde API:", data)
+        setTemplates(data)
         setLoading(false)
       })
       .catch((error) => {
@@ -78,7 +72,7 @@ function useTemplates() {
   return { templates, loading: loading, refetchTemplates: fetchTemplates }
 }
 
-export default function Campaigns() {
+export function Campaigns() {
   const { campanas, loading: campanasLoading, refetchCampanas } = useCampanas()
   const { templates, loading: templatesLoading, refetchTemplates } = useTemplates()
   const { toast } = useToast()
@@ -114,9 +108,8 @@ export default function Campaigns() {
       case "draft":
       case "borrador":
         return "bg-gray-100 text-gray-800"
-      case "pausada":
-        return "bg-yellow-100 text-yellow-800"
-      case "finalizada":
+      case "programada":
+      case "scheduled":
         return "bg-blue-100 text-blue-800"
       default:
         return "bg-gray-100 text-gray-800"
@@ -124,29 +117,24 @@ export default function Campaigns() {
   }
 
   const getStatusText = (status: string) => {
-    const statusMap: { [key: string]: string } = {
-      "activa": "Activa",
-      "enviada": "Enviada", 
-      "pausada": "Pausada",
-      "borrador": "Borrador",
-      "finalizada": "Finalizada"
+    switch (status) {
+      case "activa":
+        return "Activa"
+      case "enviada":
+        return "Enviada"
+      case "draft":
+      case "borrador":
+        return "Borrador"
+      case "programada":
+      case "scheduled":
+        return "Programada"
+      default:
+        return status || "Desconocido"
     }
-    return statusMap[status] || status
   }
 
   const handleCreateCampaign = async () => {
-    if (!newCampaign.name || !newCampaign.selectedTemplate) {
-      toast({
-        title: "Campos requeridos",
-        description: "Completa todos los campos obligatorios",
-        variant: "destructive"
-      })
-      return
-    }
-
     try {
-      setIsCreating(true)
-      
       const payload = {
         nombre_campanha: newCampaign.name,
         descripcion: newCampaign.description || null,
@@ -181,29 +169,16 @@ export default function Campaigns() {
         })
       }
     } catch (error) {
-      console.error("Error:", error)
       toast({
-        title: "Error de conexión",
+        title: "Error de red",
         description: "No se pudo conectar con el servidor",
         variant: "destructive"
       })
-    } finally {
-      setIsCreating(false)
     }
   }
 
   const handleCreateTemplate = async () => {
-    if (!newTemplate.name || !newTemplate.message) {
-      toast({
-        title: "Campos requeridos",
-        description: "Completa todos los campos",
-        variant: "destructive"
-      })
-      return
-    }
-
     try {
-      setIsCreatingTemplate(true)
       const response = await fetch("/api/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -230,14 +205,11 @@ export default function Campaigns() {
         })
       }
     } catch (error) {
-      console.error("Error:", error)
       toast({
-        title: "Error de conexión",
+        title: "Error de red",
         description: "No se pudo conectar con el servidor",
         variant: "destructive"
       })
-    } finally {
-      setIsCreatingTemplate(false)
     }
   }
 
@@ -296,11 +268,6 @@ export default function Campaigns() {
     setUploadProgress(0)
     
     try {
-      // Simular progreso
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90))
-      }, 200)
-
       const response = await fetch('/api/contactos/mass-insert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -309,8 +276,6 @@ export default function Campaigns() {
           campanhaId: selectedCampanaForUpload
         })
       })
-      
-      clearInterval(progressInterval)
       
       if (response.ok) {
         const result = await response.json()
@@ -324,10 +289,8 @@ export default function Campaigns() {
         // Refrescar campañas para mostrar nuevos contactos
         refetchCampanas()
         
-        // Resetear estados después de un delay
-        setTimeout(() => {
-          resetUploadStates()
-        }, 2000)
+        // Resetear estados
+        resetUploadStates()
         
       } else {
         const error = await response.json()
@@ -336,7 +299,6 @@ export default function Campaigns() {
           description: error.error,
           variant: "destructive"
         })
-        setUploadStep('campaign')
       }
     } catch (error) {
       toast({
@@ -344,7 +306,6 @@ export default function Campaigns() {
         description: "No se pudieron insertar los contactos",
         variant: "destructive"
       })
-      setUploadStep('campaign')
     }
   }
 
@@ -574,7 +535,7 @@ export default function Campaigns() {
                     <SelectContent>
                       {campanas.map((campana) => (
                         <SelectItem key={campana.id} value={campana.id.toString()}>
-                          {campana.name}
+                          {campana.nombre_campanha}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -601,11 +562,6 @@ export default function Campaigns() {
                   <p className="text-muted-foreground">
                     Por favor espera mientras se procesan los contactos
                   </p>
-                  {uploadProgress === 100 && (
-                    <div className="text-green-600 font-medium">
-                      ✅ Contactos insertados exitosamente
-                    </div>
-                  )}
                 </div>
               )}
             </DialogContent>
@@ -656,7 +612,7 @@ export default function Campaigns() {
                     <SelectContent>
                       {templates.map((template) => (
                         <SelectItem key={template.id} value={template.id.toString()}>
-                          {template.name}
+                          {template.nombre_template}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -665,7 +621,7 @@ export default function Campaigns() {
                     <div className="mt-2 p-3 bg-muted rounded-md">
                       <p className="text-sm text-muted-foreground">Vista previa del mensaje:</p>
                       <p className="text-sm mt-1">
-                        {templates.find(t => t.id.toString() === newCampaign.selectedTemplate)?.message}
+                        {templates.find(t => t.id.toString() === newCampaign.selectedTemplate)?.mensaje_template}
                       </p>
                     </div>
                   )}
@@ -690,6 +646,94 @@ export default function Campaigns() {
           </Dialog>
         </div>
       </div>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="campaign-name">Nombre de la campaña</Label>
+                <Input
+                  id="campaign-name"
+                  value={newCampaign.name}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
+                  placeholder="Ej: Reactivación Leads Enero"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="campaign-description">Descripción (opcional)</Label>
+                <Textarea
+                  id="campaign-description"
+                  value={newCampaign.description}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, description: e.target.value })}
+                  placeholder="Descripción de la campaña"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="campaign-template">Template</Label>
+                <Select
+                  value={newCampaign.selectedTemplate}
+                  onValueChange={(value) => setNewCampaign({ ...newCampaign, selectedTemplate: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template: any) => (
+                      <SelectItem key={template.id} value={template.id.toString()}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {newCampaign.selectedTemplate && (
+                  <div className="mt-2 p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium mb-1">Vista previa del mensaje:</p>
+                    <p className="text-sm text-muted-foreground">
+                      {templates.find((t: any) => t.id.toString() === newCampaign.selectedTemplate)?.message}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsCreating(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleCreateCampaign}
+                  disabled={!newCampaign.name || !newCampaign.selectedTemplate}
+                >
+                  Crear Campaña
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Upload Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="w-5 h-5" />
+            Subir Lista de Leads
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+            <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-lg font-medium mb-2">Arrastra tu archivo Excel aquí</p>
+            <p className="text-muted-foreground mb-4">o haz clic para seleccionar</p>
+            <Button variant="outline">Seleccionar archivo</Button>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            <p>
+              <strong>Formato requerido:</strong> Excel (.xlsx) con columnas: Nombre, Teléfono, Email, Segmento
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Campaigns List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -698,46 +742,58 @@ export default function Campaigns() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                <Badge className={getStatusColor(campaign.status)}>
-                  {getStatusText(campaign.status)}
-                </Badge>
+                <Badge className={getStatusColor(campaign.status)}>{getStatusText(campaign.status)}</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {campaign.description && (
-                <p className="text-sm text-muted-foreground">{campaign.description}</p>
-              )}
-              
-              {campaign.template && (
-                <div className="bg-muted p-3 rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-1">Template: {campaign.template.name}</p>
-                  <p className="text-sm">{campaign.template.message}</p>
-                </div>
-              )}
+              <div className="bg-muted p-3 rounded-lg">
+                <p className="text-sm">{campaign.message}</p>
+                {campaign.template && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Template: {campaign.template.name}
+                  </p>
+                )}
+              </div>
 
-              <div className="grid grid-cols-3 gap-4 pt-2">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{campaign.recipients || 0}</div>
-                  <p className="text-xs text-muted-foreground">Contactos</p>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-primary">{campaign.recipients}</div>
+                  <p className="text-xs text-muted-foreground">Destinatarios</p>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{campaign.responses || 0}</div>
-                  <p className="text-xs text-muted-foreground">Enviados</p>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{campaign.conversions || 0}</div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">{campaign.responses}</div>
                   <p className="text-xs text-muted-foreground">Respuestas</p>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-600">{campaign.conversions}</div>
+                  <p className="text-xs text-muted-foreground">Conversiones</p>
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Send className="w-3 h-3 mr-1" />
-                  Enviar
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  Estadísticas
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>
+                  {campaign.description && (
+                    <span className="block">{campaign.description}</span>
+                  )}
+                </span>
+                {campaign.sentDate && <span>Enviada: {campaign.sentDate}</span>}
+              </div>
+
+              <div className="flex gap-2">
+                {(campaign.status === "draft" || campaign.status === "borrador") && (
+                  <Button size="sm" className="flex-1">
+                    <Send className="w-4 h-4 mr-2" />
+                    Enviar
+                  </Button>
+                )}
+                {(campaign.status === "activa" || campaign.status === "enviada") && (
+                  <Button size="sm" variant="outline" className="flex-1 bg-transparent">
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Ver métricas
+                  </Button>
+                )}
+                <Button size="sm" variant="outline">
+                  Editar
                 </Button>
               </div>
             </CardContent>
@@ -745,7 +801,7 @@ export default function Campaigns() {
         ))}
       </div>
 
-      {/* Templates Section */}
+      {/* Campaign Templates */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -757,9 +813,9 @@ export default function Campaigns() {
                   Nuevo Template
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Crear Template</DialogTitle>
+                  <DialogTitle>Crear Nuevo Template</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -768,7 +824,7 @@ export default function Campaigns() {
                       id="template-name"
                       value={newTemplate.name}
                       onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
-                      placeholder="Ej: Saludo inicial"
+                      placeholder="Ej: Reactivación de Leads"
                     />
                   </div>
                   <div>
@@ -777,7 +833,7 @@ export default function Campaigns() {
                       id="template-message"
                       value={newTemplate.message}
                       onChange={(e) => setNewTemplate({ ...newTemplate, message: e.target.value })}
-                      placeholder="Hola {nombre}, te contactamos desde..."
+                      placeholder="Escribe el mensaje del template..."
                       rows={4}
                     />
                   </div>
@@ -785,8 +841,11 @@ export default function Campaigns() {
                     <Button variant="outline" onClick={() => setIsCreatingTemplate(false)}>
                       Cancelar
                     </Button>
-                    <Button onClick={handleCreateTemplate} disabled={isCreatingTemplate}>
-                      {isCreatingTemplate ? "Creando..." : "Crear Template"}
+                    <Button 
+                      onClick={handleCreateTemplate}
+                      disabled={!newTemplate.name || !newTemplate.message}
+                    >
+                      Crear Template
                     </Button>
                   </div>
                 </div>
@@ -794,38 +853,60 @@ export default function Campaigns() {
             </Dialog>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {templates.map((template: any) => (
-              <Card key={template.id} className="p-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">{template.name}</h4>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => useTemplateInCampaign(template.id.toString())}
-                    >
-                      Usar
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
+        <CardContent className="space-y-3">
+          {templatesLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+              <p className="text-sm text-muted-foreground">Cargando templates...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {templates.map((template: any) => (
+                <Card key={template.id} className="p-4">
+                  <h4 className="font-medium mb-2">{template.name}</h4>
+                  <p className="text-sm text-muted-foreground mb-3 line-clamp-3">
                     {template.message}
                   </p>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => useTemplateInCampaign(template.id.toString())}
+                    >
+                      Usar en campaña
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      Editar
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+              
+              {templates.length === 0 && (
+                <div className="col-span-2 text-center py-8">
+                  <p className="text-muted-foreground">No hay templates disponibles</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-2"
+                    onClick={() => setIsCreatingTemplate(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Crear primer template
+                  </Button>
                 </div>
-              </Card>
-            ))}
-          </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Statistics Section */}
+      {/* Campaign Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">
-                {campanas.filter((c: any) => c.status === 'activa').length}
+                {campanas.filter((c: any) => c.status === "activa" || c.status === "enviada").length}
               </div>
               <p className="text-sm text-muted-foreground">Campañas activas</p>
             </div>
@@ -837,7 +918,7 @@ export default function Campaigns() {
               <div className="text-2xl font-bold text-blue-600">
                 {campanas.reduce((sum: number, c: any) => sum + (c.recipients || 0), 0)}
               </div>
-              <p className="text-sm text-muted-foreground">Total contactos</p>
+              <p className="text-sm text-muted-foreground">Total destinatarios</p>
             </div>
           </CardContent>
         </Card>
@@ -847,7 +928,7 @@ export default function Campaigns() {
               <div className="text-2xl font-bold text-green-600">
                 {campanas.reduce((sum: number, c: any) => sum + (c.responses || 0), 0)}
               </div>
-              <p className="text-sm text-muted-foreground">Mensajes enviados</p>
+              <p className="text-sm text-muted-foreground">Total respuestas</p>
             </div>
           </CardContent>
         </Card>
@@ -856,9 +937,9 @@ export default function Campaigns() {
             <div className="text-center">
               <div className="text-2xl font-bold text-accent">
                 {(() => {
-                  const totalResponses = campanas.reduce((sum: number, c: any) => sum + (c.conversions || 0), 0)
-                  const totalSent = campanas.reduce((sum: number, c: any) => sum + (c.responses || 0), 0)
-                  return totalSent > 0 ? Math.round((totalResponses / totalSent) * 100) : 0
+                  const totalResponses = campanas.reduce((sum: number, c: any) => sum + (c.responses || 0), 0)
+                  const totalRecipients = campanas.reduce((sum: number, c: any) => sum + (c.recipients || 0), 0)
+                  return totalRecipients > 0 ? Math.round((totalResponses / totalRecipients) * 100) : 0
                 })()}%
               </div>
               <p className="text-sm text-muted-foreground">Tasa de respuesta</p>

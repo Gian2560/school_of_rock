@@ -7,7 +7,7 @@ import { Leads } from "@/components/leads"
 import { Contactos } from "@/components/contactos"
 import { TaskCenter } from "@/components/task-center"
 import { Calendar } from "@/components/calendar"
-import { Campaigns } from "@/components/campaigns"
+import Campaigns from "@/components/campaigns"
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/route";

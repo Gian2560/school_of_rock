@@ -8,7 +8,7 @@ import { Contactos } from "@/components/contactos";
 import NewConversations from "@/components/new-conversations";
 import { TaskCenter } from "@/components/task-center";
 import { Calendar } from "@/components/calendar";
-import { Campaigns } from "@/components/campaigns";
+import Campaigns from "@/components/campaigns";
 
 export default function CRMPageClient() {
   const [activeSection, setActiveSection] = useState("contactos");
