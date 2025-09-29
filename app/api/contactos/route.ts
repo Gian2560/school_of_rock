@@ -14,11 +14,12 @@ export async function GET() {
     const contactos = await prisma.contacto.findMany({
       select: {
         id_contacto: true,
+        rol_contacto: true, 
         nombres: true,
         apellidos: true,
         telefono: true,
         correo: true,
-        segmento: true,
+        segmento: true, 
         distrito: true,
         estado: true,
         fecha_creacion: true,
@@ -36,6 +37,7 @@ export async function GET() {
     // Transformar los datos al formato esperado por el frontend
     const transformedContactos = contactos.map((contacto: any) => ({
       id_contacto: contacto.id_contacto,
+      rol_contacto: contacto.rol_contacto,
       nombres: contacto.nombres || '',
       apellidos: contacto.apellidos || '',
       segmento: contacto.segmento || '',

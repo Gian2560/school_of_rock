@@ -20,7 +20,8 @@ import {
   CheckCircle2, 
   ArrowLeft, 
   MessageCircle,
-  FileText 
+  FileText,
+  Filter
 } from "lucide-react"
 
 const tasksData = [
@@ -107,37 +108,156 @@ const tasksData = [
 ]
 
 // Hook para obtener las tareas desde la API
-function useTareas() {
+function useTareas(filters: { range: string; start?: string; end?: string; applied?: boolean }) {
   const [tareas, setTareas] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchTareas = () => {
     setLoading(true)
-    fetch("/api/tareas")
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("📋 Tareas desde API:", data)
-        setTareas(data)
+    const params = new URLSearchParams()
+    params.set("range", filters.range)
+    if (filters.range === "custom" && filters.start && filters.end) {
+      params.set("start", filters.start)
+      params.set("end", filters.end)
+    }
+    const url = `/api/tareas?${params.toString()}`
+    console.log("🔎 Fetch tareas URL:", url)
+
+    fetch(url, { cache: "no-store" })
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) {
+          console.error("🚫 API no OK:", data)
+          throw new Error(data?.error || `HTTP ${res.status}`)
+        }
+        console.log("📋 Tareas desde API:", data, "| Array?", Array.isArray(data))
+        setTareas(Array.isArray(data) ? data : [])
         setLoading(false)
       })
-      .catch((error) => {
-        console.error("❌ Error cargando tareas:", error)
-        setTareas(tasksData) // Fallback a datos estáticos
+      .catch((err) => {
+        console.error("❌ Error cargando tareas:", err)
+        setTareas([])
         setLoading(false)
       })
   }
 
   useEffect(() => {
+    // ⏸️ Si es personalizado y aún no “aplicaste”, no consultes.
+    if (filters.range === "custom" && !filters.applied) {
+      console.log("⏸️ Custom sin aplicar — no fetch")
+      setTareas([])     // opcional para mostrar vacío
+      setLoading(false)
+      return
+    }
+    console.log("⚙️ Filtros cambiaron:", filters)
     fetchTareas()
-  }, [])
+  }, [filters.range, filters.start, filters.end])
 
   return { tareas, loading, refetchTareas: fetchTareas }
 }
 
 export function TaskCenter() {
-  const { tareas, loading, refetchTareas } = useTareas()
-  const [selectedPriority, setSelectedPriority] = useState<string | null>(null)
+  // ====== NUEVOS ESTADOS DE FILTRO ======
+  const [filterRange, setFilterRange] = useState<"today" | "week" | "month" | "custom">("today")
+  const [customStart, setCustomStart] =useState("")// YYYY-MM-DD
+  const [customEnd, setCustomEnd] = useState("")     // YYYY-MM-DD
+  const [customApplied, setCustomApplied] = useState(false)
 
+  const { tareas, loading, refetchTareas } = useTareas({
+    range: filterRange,
+    start: customStart || undefined,
+    end: customEnd || undefined,
+    applied: customApplied,
+  })
+
+  // Cuando cambias rango, invalida la aplicación
+  const onChangeRange = (v: any) => {
+    setFilterRange(v)
+    setCustomApplied(false) // ✅
+  }
+  // Cuando cambias fechas, invalida la aplicación
+  const onChangeStart = (v: string) => {
+    setCustomStart(v)
+    setCustomApplied(false) // ✅
+  }
+  const onChangeEnd = (v: string) => {
+    setCustomEnd(v)
+    setCustomApplied(false) // ✅
+  }
+
+  const [selectedPriority, setSelectedPriority] = useState<string | null>(null)
+// ====== BARRA DE FILTROS (arriba de todo) ======
+  const FiltersBar = (
+    <Card>
+      <CardContent className="flex flex-col md:flex-row gap-3 pt-4 items-start md:items-center">
+        {/* Rango */}
+        <div className="flex items-center gap-2">
+          <Select value={filterRange} onValueChange={onChangeRange}>
+            <SelectTrigger className="w-48">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Rango" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Hoy</SelectItem>
+              <SelectItem value="week">Semana actual</SelectItem>
+              <SelectItem value="month">Mes actual</SelectItem>
+              <SelectItem value="custom">Personalizado…</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Fechas personalizadas (solo si range=custom) */}
+        {filterRange === "custom" && (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Desde</Label>
+              <Input
+                type="date"
+                value={customStart}
+                onChange={(e) => onChangeStart(e.target.value)} // ✅
+                className="w-40"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Hasta</Label>
+              <Input
+                type="date"
+                value={customEnd}
+                onChange={(e) => onChangeEnd(e.target.value)} // ✅
+                className="w-40"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCustomApplied(true) // ✅ habilita el fetch
+                refetchTareas()
+              }}
+              disabled={!customStart || !customEnd}
+            >
+              Aplicar
+            </Button>
+          </div>
+        )}
+
+
+        {/* Botón Reset */}
+        <div className="ml-auto">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setFilterRange("today")
+              setCustomStart("")
+              setCustomEnd("")
+              setCustomApplied(false)
+            }}
+          >
+            Limpiar filtros
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
   // Estados para modales (igual que en contactos)
   const [callModalOpen, setCallModalOpen] = useState(false)
   const [visitModalOpen, setVisitModalOpen] = useState(false)
@@ -351,7 +471,7 @@ export function TaskCenter() {
         body: JSON.stringify({
           id_tarea: selectedLead.id, // Usar ID de la tarea
           fechaHora,
-          notas: visitNotes,
+          notas: visitNotes
         }),
       });
       if (res.ok) {
@@ -433,10 +553,11 @@ export function TaskCenter() {
   if (loading) {
     return (
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-center min-h-[400px]">
+        {FiltersBar}
+        <div className="flex items-center justify-center min-h-[300px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Cargando tareas...</p>
+            <p className="text-muted-foreground">Cargando tareas…</p>
           </div>
         </div>
       </div>
@@ -448,6 +569,7 @@ export function TaskCenter() {
 
     return (
       <div className="p-6 space-y-6">
+        {FiltersBar}
         {/* Header with back button */}
         <div className="flex items-center gap-4">
           <Button variant="outline" onClick={handleBackToOverview}>
@@ -769,6 +891,7 @@ export function TaskCenter() {
 
   return (
     <div className="p-6 space-y-6">
+      {FiltersBar}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

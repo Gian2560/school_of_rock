@@ -26,7 +26,7 @@ const serializeBigInt = (obj: any): any => {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { id_tarea, estado, nota, tipo_accion = 'llamada', asesor_id } = body
+    const { id_tarea, estado, nota, tipo_accion = 'llamada', asesor_id} = body
 
     // Validaciones
     if (!id_tarea) {
@@ -43,19 +43,17 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log("📝 Registrando acción comercial:", { id_tarea, estado, nota, tipo_accion })
+    console.log("📝 Registrando acción comercial:", { id_tarea, estado, nota, tipo_accion})
 
-    // Verificar que la tarea existe
-    const tareaExiste = await prisma.$queryRaw`
-      SELECT id_tarea FROM tarea WHERE id_tarea = ${id_tarea}
-    ` as any[]
+    // 1) Traer tarea + id_contacto
+    const tareaExiste = await prisma.$queryRaw<
+      Array<{ id_tarea: number; id_contacto: number }>
+    >`SELECT id_tarea, id_contacto FROM tarea WHERE id_tarea = ${id_tarea}`
 
     if (tareaExiste.length === 0) {
-      return NextResponse.json(
-        { error: "Tarea no encontrada" },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "Tarea no encontrada" }, { status: 404 })
     }
+    const { id_contacto } = tareaExiste[0]
 
     // Verificar qué personas (asesores) existen
     const personas = await prisma.$queryRaw`
@@ -124,8 +122,8 @@ export async function POST(request: Request) {
 
     // Registrar la acción comercial
     const accionComercial = await prisma.$queryRaw`
-      INSERT INTO accion_comercial (tipo_accion, id_tarea, asesor_id, estado, fecha_accion, nota)
-      VALUES (${tipo_accion}, ${id_tarea}, ${personaId}, ${estado}, NOW(), ${nota || ''})
+      INSERT INTO accion_comercial (tipo_accion, id_tarea, id_contacto,asesor_id, estado, fecha_accion, nota)
+      VALUES (${tipo_accion}, ${id_tarea}, ${id_contacto}, ${personaId}, ${estado}, NOW(), ${nota || ''})
       RETURNING *
     ` as any[]
 

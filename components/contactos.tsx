@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { Users, Plus } from "lucide-react";
 // import { Toaster } from "@/components/ui/toaster"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -57,6 +58,7 @@ function useContactos() {
         // Mapear los datos de la API al formato esperado por el componente
         const mappedContactos = data.map((contacto: any) => ({
           id_contacto: contacto.id_contacto,
+          rol_contacto: contacto.rol_contacto,  
           name: `${contacto.nombres} ${contacto.apellidos}`.trim(),
           segment: contacto.segmento || '',
             status: contacto.estado,
@@ -130,9 +132,81 @@ export function Contactos() {
   const [convMsgs, setConvMsgs] = useState<
     { id: string; text: string; from: "bot" | "usuario"; fechaTexto: string }[]
   >([])
+  const [kidsOpen, setKidsOpen] = useState(false);
+  const [kidsLoading, setKidsLoading] = useState(false);
+  const [kids, setKids] = useState<any[]>([]);
+  const [newKidName, setNewKidName] = useState("");
+  const [newKidLast, setNewKidLast] = useState("");
 
+  // para acción comercial sobre un hijo (lead)
+  const [kidActionOpenFor, setKidActionOpenFor] = useState<number | null>(null);
+  const [kidActionResult, setKidActionResult] = useState("");
+  const [kidActionNotes, setKidActionNotes] = useState("");
+
+  const getStatusAsesorHijoColor = (estado: string) => {
+  switch (estado) {
+    case "Clase de prueba": return "bg-blue-500 text-white";
+    case "Enrolado":        return "bg-orange-500 text-white";
+    default: return "bg-gray-100 text-gray-800";
+  }
+};
+const saveKidAction = async (id_lead: number) => {
+  if (!kidActionResult) return;
+  const res = await fetch("/api/leads/accion", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id_lead,
+      estado: kidActionResult,   // Ej: "Enrolado" | "Clase de prueba" | "Volver a contactar" ...
+      nota: kidActionNotes || "",
+    }),
+  });
+
+  if (res.ok) {
+    toast({ title: "Acción comercial registrada" });
+    // refrescar la tabla de hijos
+    if (selectedLead) await openKids(selectedLead);
+    setKidActionOpenFor(null);
+    setKidActionResult("");
+    setKidActionNotes("");
+  } else {
+    toast({ title: "No se pudo registrar la acción", variant: "destructive" });
+  }
+};
   const {contactos, reload} = useContactos()
+  const openKids = async (lead: any) => {
+    setSelectedLead(lead);
+    setKidsOpen(true);
+    setKidsLoading(true);
+    setKids([]);
+    try {
+      const res = await fetch(`/api/contactos/${lead.id_contacto}/hijos`, { cache: "no-store" });
+      const data = await res.json();
+      setKids(Array.isArray(data) ? data : []);
+    } catch {
+      setKids([]);
+    } finally {
+      setKidsLoading(false);
+    }
+  };
 
+  const createKid = async () => {
+    if (!selectedLead || !newKidName.trim()) return;
+    const res = await fetch(`/api/contactos/${selectedLead.id_contacto}/hijos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre: newKidName, apellidos: newKidLast })
+    });
+    if (res.ok) {
+      setNewKidName("");
+      setNewKidLast("");
+      // recarga la lista
+      openKids(selectedLead);
+      toast({ title: "Alumno creado", description: "Se agregó el hijo correctamente." });
+    } else {
+      toast({ title: "No se pudo crear", variant: "destructive" });
+    }
+  };
   const getSegmentColor = (segment: string) => {
     switch (segment) {
       case "C1":
@@ -340,11 +414,11 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Contactos</h1>
+          <h1 className="text-3xl font-bold text-foreground">Leads</h1>
           <p className="text-muted-foreground">Gestión de leads y conversaciones</p>
         </div>
         <Badge variant="outline" className="text-sm">
-          {filteredLeads.length} contactos
+          {filteredLeads.length} leads
         </Badge>
       </div>
 
@@ -353,7 +427,7 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
-            placeholder="Buscar contactos..."
+            placeholder="Buscar leads..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -375,7 +449,7 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Contactos</CardTitle>
+          <CardTitle>Lista de Leads</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -467,6 +541,126 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
                       {/* <Button size="sm" variant="outline" onClick={() => handleCreditAction(lead)}>
                         <FileText className="w-4 h-4" />
                       </Button> */}
+                      {lead.rol_contacto !== "estudiante" && (
+                        <Dialog open={kidsOpen} onOpenChange={setKidsOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => openKids(lead)}>
+                              <Users className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="
+    w-[95vw]               /* ocupa casi todo el ancho de la ventana */
+    sm:max-w-[1100px]      /* ancho grande en desktop */
+    max-h-[85vh]           /* limita alto para no desbordar */
+    overflow-hidden        /* que el scroll lo manejen los contenedores internos */
+  ">
+                            <DialogHeader>
+                              <DialogTitle>Beneficiarios de {lead.name}</DialogTitle>
+                            </DialogHeader>
+
+                            {/* Crear nuevo hijo */}
+                            <div className="flex items-end gap-2 mb-3">
+                              <div className="flex-1">
+                                <Label>Nombre</Label>
+                                <Input value={newKidName} onChange={(e) => setNewKidName(e.target.value)} placeholder="Nombre del alumno" />
+                              </div>
+                              <div className="flex-1">
+                                <Label>Apellidos</Label>
+                                <Input value={newKidLast} onChange={(e) => setNewKidLast(e.target.value)} placeholder="Apellidos" />
+                              </div>
+                              {/* <Button onClick={createKid} disabled={!newKidName.trim()}>
+                                <Plus className="w-4 h-4 mr-1" /> Agregar
+                              </Button> */}
+                            </div>
+
+                            {/* Lista de hijos */}
+                            {kidsLoading ? (
+                              <p className="text-sm text-muted-foreground">Cargando…</p>
+                            ) : kids.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Sin hijos registrados.</p>
+                            ) : (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Nombre</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead>Interés</TableHead>            {/* nuevo */}
+                                    <TableHead>Estado asesor</TableHead>
+                                    <TableHead>Última interacción</TableHead>
+                                    <TableHead className="text-right">Acción</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {kids.map((k) => {
+      const nombreCompleto = (k.nombre + " " + (k.apellidos || "")).trim();
+      const isOpen = kidActionOpenFor === k.id_lead;
+
+                                    return (
+                                      <TableRow key={k.id_lead}>
+                                        <TableCell className="font-medium">{nombreCompleto}</TableCell>
+
+                                        <TableCell>
+                                          <Badge variant="outline">{mapEtapaToStatus(k.etapa)}</Badge>
+                                        </TableCell>
+
+                                        <TableCell>{k.interes || "—"}</TableCell> {/* nuevo */}
+
+                                        <TableCell>
+                                          {k.estado_accion_comercial ? (
+                                            <Badge variant="outline" className={getStatusAsesorHijoColor(k.estado_accion_comercial)}>
+                                              {k.estado_accion_comercial}
+                                            </Badge>
+                                          ) : (
+                                            <span className="text-muted-foreground">—</span>
+                                          )}
+                                        </TableCell>
+
+                                        <TableCell>
+                                          {k.ultima_interaccion
+                                            ? new Date(k.ultima_interaccion).toLocaleDateString("es-ES")
+                                            : "—"}
+                                        </TableCell>
+
+                                        <TableCell className="text-right">
+                                          {!isOpen ? (
+                                            <Button size="sm" variant="outline" onClick={() => setKidActionOpenFor(k.id_lead)}>
+                                              Registrar acción
+                                            </Button>
+                                          ) : (
+                                            <div className="flex items-center gap-2 justify-end">
+                                              <Select value={kidActionResult} onValueChange={setKidActionResult}>
+                                                <SelectTrigger className="w-40">
+                                                  <SelectValue placeholder="Resultado" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="Clase de prueba">Clase de prueba</SelectItem>
+                                                  <SelectItem value="Enrolado">Enrolado</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                              <Input
+                                                placeholder="Notas"
+                                                className="w-48"
+                                                value={kidActionNotes}
+                                                onChange={(e) => setKidActionNotes(e.target.value)}
+                                              />
+                                              <Button size="sm" onClick={() => saveKidAction(k.id_lead)} disabled={!kidActionResult}>
+                                                Guardar
+                                              </Button>
+                                              <Button size="sm" variant="ghost" onClick={() => { setKidActionOpenFor(null); setKidActionResult(""); setKidActionNotes(""); }}>
+                                                Cancelar
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
