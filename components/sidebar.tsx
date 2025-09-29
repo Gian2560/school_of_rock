@@ -13,6 +13,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     // { id: "leads", label: "Leads", icon: Users },
     { id: "contactos", label: "Leads", icon: Users },
+    { id: "new-conversations", label: "Nuevas conversaciones", icon: Users },
     { id: "tasks", label: "Centro de tareas", icon: CheckSquare },
     { id: "calendar", label: "Calendario", icon: CalendarIcon },
     { id: "campaigns", label: "Campañas", icon: Megaphone },

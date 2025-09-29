@@ -68,30 +68,34 @@ model cliente_campanha {
 }
 
 model contacto {
-  id_contacto      Int                @id @default(autoincrement())
-  rol_contacto     String             @default("apoderado") @db.VarChar(100)
-  nombres          String             @db.VarChar(100)
-  apellidos        String?            @db.VarChar(100)
-  telefono         String?            @unique(map: "uq_contacto_tel") @db.VarChar(20)
-  correo           String?            @unique(map: "uq_contacto_correo") @db.VarChar(120)
-  distrito         String?            @db.VarChar(120)
-  estado           String?            @db.VarChar(30)
-  puntaje_nse      Int?
-  banda_nse        String?            @db.VarChar(100)
-  puntaje_interes  Int?
-  banda_interes    String?            @db.VarChar(100)
-  fecha_nacimiento DateTime?          @db.Date
-  no_contactar     Boolean            @default(false)
-  whatsapp_opt_in  DateTime?          @db.Timestamp(6)
-  extra            Json?
-  segmento         String?            @db.VarChar(50)
-  fecha_creacion   DateTime           @default(now()) @db.Timestamp(6)
-  prioridad        Int?
-  accion_comercial accion_comercial[]
-  cita             cita[]
-  lead             lead[]
-  lead_contacto    lead_contacto[]
-  tarea            tarea[]
+  id_contacto              Int                @id @default(autoincrement())
+  rol_contacto             String             @default("apoderado") @db.VarChar(100)
+  nombres                  String             @db.VarChar(100)
+  apellidos                String?            @db.VarChar(100)
+  telefono                 String?            @unique(map: "uq_contacto_tel") @db.VarChar(20)
+  correo                   String?            @unique(map: "uq_contacto_correo") @db.VarChar(120)
+  distrito                 String?            @db.VarChar(120)
+  estado                   String?            @db.VarChar(30)
+  puntaje_nse              Int?
+  banda_nse                String?            @db.VarChar(100)
+  puntaje_interes          Int?
+  banda_interes            String?            @db.VarChar(100)
+  fecha_nacimiento         DateTime?          @db.Date
+  no_contactar             Boolean            @default(false)
+  whatsapp_opt_in          DateTime?          @db.Timestamp(6)
+  extra                    Json?
+  segmento                 String?            @db.VarChar(50)
+  fecha_creacion           DateTime           @default(now()) @db.Timestamp(6)
+  prioridad                Int?
+  fecha_ultima_interaccion DateTime?          @db.Timestamp(6)
+  accion_comercial         accion_comercial[]
+  cita                     cita[]
+  datos_contacto           datos_contacto?
+  lead                     lead[]
+  lead_contacto            lead_contacto[]
+  tarea                    tarea[]
+
+  @@index([fecha_ultima_interaccion(sort: Desc)], map: "sor_contacto_fui_idx")
 }
 
 model historico_contacto_estado {
@@ -228,4 +232,31 @@ model tarea {
   estado_tarea        String?            @db.VarChar(50)
   accion_comercial    accion_comercial[]
   contacto            contacto           @relation(fields: [id_contacto], references: [id_contacto], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model datos_contacto {
+  id_contacto              Int       @id
+  residencia_distrito      String?   @db.VarChar(120)
+  colegio                  String?   @db.VarChar(160)
+  edad_exacta              Int?
+  experiencia_musical      Boolean?
+  instrumento_en_casa      Boolean?
+  familiar_interes_musical Boolean?
+  acepta_agendar           Boolean?
+  propone_horario          String?   @db.VarChar(120)
+  telefono_alterno         String?   @db.VarChar(20)
+  pregunta_precios         Boolean?
+  pregunta_horarios        Boolean?
+  completo_formulario      Boolean?
+  apoderado_interesado     Boolean?
+  fuente_lead              String?   @db.VarChar(120)
+  canal_contacto           String?   @db.VarChar(120)
+  participacion_previa     Boolean?
+  palabras_clave           String?
+  rechazos                 Int?      @default(0)
+  posposiciones            Int?      @default(0)
+  sin_respuesta_48h        Boolean?  @default(false)
+  fecha_creacion           DateTime? @default(now()) @db.Timestamp(6)
+  fecha_actualizacion      DateTime? @default(now()) @db.Timestamp(6)
+  contacto                 contacto  @relation(fields: [id_contacto], references: [id_contacto], onDelete: Cascade, onUpdate: NoAction)
 }

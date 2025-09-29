@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/sidebar";
 import { Dashboard } from "@/components/dashboard";
 import { Leads } from "@/components/leads";
 import { Contactos } from "@/components/contactos";
+import NewConversations from "@/components/new-conversations";
 import { TaskCenter } from "@/components/task-center";
 import { Calendar } from "@/components/calendar";
 import { Campaigns } from "@/components/campaigns";
@@ -20,6 +21,8 @@ export default function CRMPageClient() {
         return <Leads />;
       case "contactos":
         return <Contactos />;
+      case "new-conversations":
+        return <NewConversations />;
       case "tasks":
         return <TaskCenter />;
       case "calendar":

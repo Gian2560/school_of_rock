@@ -446,10 +446,10 @@ const countToday = useMemo(
               <User className="w-4 h-4" />
               <span className="text-sm">Visita al local</span>
             </div>
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <Phone className="w-4 h-4" />
               <span className="text-sm">Llamada</span>
-            </div>
+            </div> */}
             {/* <div className="flex items-center gap-2">
               <CalendarIcon className="w-4 h-4" />
               <span className="text-sm">Clase de prueba</span>
