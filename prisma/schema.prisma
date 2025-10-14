@@ -260,3 +260,25 @@ model datos_contacto {
   fecha_actualizacion      DateTime? @default(now()) @db.Timestamp(6)
   contacto                 contacto  @relation(fields: [id_contacto], references: [id_contacto], onDelete: Cascade, onUpdate: NoAction)
 }
+
+model mensaje_out {
+  id_msg        String   @id
+  phone_to      String
+  template_name String
+  template_lang String
+  campanha_id   String?
+  sent_at       DateTime @default(now()) @db.Timestamp(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model mensaje_status_event {
+  id                BigInt   @id @default(autoincrement())
+  id_msg            String
+  estado            String
+  ts_unix           BigInt?
+  recipient_id      String?
+  pricing_json      Json?
+  conversation_json Json?
+  errors_json       Json?
+  created_at        DateTime @default(now()) @db.Timestamp(6)
+}

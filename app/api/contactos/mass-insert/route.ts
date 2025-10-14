@@ -37,66 +37,112 @@ export async function POST(request: Request) {
 
     console.log(`📥 Insertando ${contactos.length} contactos...`)
 
-    // Filtrar solo los contactos válidos que no existen
-    const contactosParaInsertar = contactos.filter((c: any) => c.valid && !c.exists)
+    // Filtrar solo los contactos válidos (incluye los que ya existen en BD)
+    const contactosValidos = contactos.filter((c: any) => c.valid && !c.exists)
 
-    if (contactosParaInsertar.length === 0) {
+    if (contactosValidos.length === 0) {
       return NextResponse.json({
         success: true,
-        message: "No hay contactos válidos para insertar",
+        message: "No hay contactos válidos para procesar",
         insertados: 0,
+        asociados: 0,
         omitidos: contactos.length
       })
     }
 
+    // Si hay campaña, verificar qué contactos ya están en esa campaña específica
+    let contactosYaEnCampana = new Set()
+    if (campanhaId) {
+      const telefonosValidos = contactosValidos
+        .map(c => c.telefono ? c.telefono.toString().replace(/\D/g, '') : null)
+        .filter(t => t)
+
+      if (telefonosValidos.length > 0) {
+        const contactosEnCampana = await prisma.$queryRaw`
+          SELECT c.telefono 
+          FROM contacto c
+          INNER JOIN cliente_campanha cc ON c.id_contacto = cc.id_contacto
+          WHERE cc.id_campanha = ${parseInt(campanhaId)}
+          AND c.telefono = ANY(${telefonosValidos})
+        ` as any[]
+
+        contactosYaEnCampana = new Set(contactosEnCampana.map(c => c.telefono))
+      }
+    }
+
     let insertados = 0
+    let asociados = 0
     let errores: any[] = []
 
-    // Insertar contactos uno por uno para manejar errores individuales
-    for (const contacto of contactosParaInsertar) {
+    // Procesar contactos uno por uno para manejar errores individuales
+    for (const contacto of contactosValidos) {
       try {
         // Limpiar y normalizar datos
         const telefonoLimpio = contacto.telefono ? contacto.telefono.toString().replace(/\D/g, '') : null
         const correoLimpio = contacto.correo ? contacto.correo.toString().toLowerCase().trim() : null
 
-        // Insertar contacto
-        const nuevoContacto = await prisma.$queryRaw`
-          INSERT INTO contacto (
-            nombres, apellidos, telefono, correo, distrito, 
-            segmento, estado, fecha_creacion
-          ) VALUES (
-            ${contacto.nombres?.trim() || ''},
-            ${contacto.apellidos?.trim() || ''},
-            ${telefonoLimpio},
-            ${correoLimpio},
-            ${contacto.distrito?.trim() || ''},
-            ${contacto.segmento?.trim() || 'general'},
-            ${contacto.estado || 'activo'},
-            NOW()
-          ) RETURNING id_contacto
-        ` as any[]
+        let contactoId = null
 
-        if (nuevoContacto && nuevoContacto.length > 0) {
-          const contactoId = nuevoContacto[0].id_contacto
+        // Verificar si ya está en esta campaña específica
+        if (campanhaId && telefonoLimpio && contactosYaEnCampana.has(telefonoLimpio)) {
+          console.log(`⚠️ Contacto ${contacto.nombres} ya está en la campaña ${campanhaId}`)
+          continue
+        }
 
-          // Si hay campaña, crear la asociación
-          if (campanhaId) {
-            try {
-              await prisma.$queryRaw`
-                INSERT INTO cliente_campanha (id_contacto, id_campanha, fecha_asociacion)
-                VALUES (${contactoId}, ${parseInt(campanhaId)}, NOW())
-              `
-            } catch (assocError) {
-              console.log(`⚠️ Error al asociar contacto ${contactoId} con campaña ${campanhaId}:`, assocError)
-              // No fallar la inserción del contacto por error de asociación
-            }
+        // Si el contacto ya existe en la BD, obtener su ID
+        if (contacto.existsInDB && telefonoLimpio) {
+          const contactoExistente = await prisma.$queryRaw`
+            SELECT id_contacto FROM contacto WHERE telefono = ${telefonoLimpio} LIMIT 1
+          ` as any[]
+
+          if (contactoExistente.length > 0) {
+            contactoId = contactoExistente[0].id_contacto
+            console.log(`📋 Usando contacto existente ID: ${contactoId}`)
           }
+        }
 
-          insertados++
+        // Si no existe, crearlo
+        if (!contactoId) {
+          const nuevoContacto = await prisma.$queryRaw`
+            INSERT INTO contacto (
+              nombres, apellidos, telefono, correo, distrito, 
+              segmento, estado, fecha_creacion
+            ) VALUES (
+              ${contacto.nombres?.trim() || ''},
+              ${contacto.apellidos?.trim() || ''},
+              ${telefonoLimpio},
+              ${correoLimpio},
+              ${contacto.distrito?.trim() || ''},
+              ${contacto.segmento?.trim() || 'general'},
+              ${contacto.estado || 'activo'},
+              NOW()
+            ) RETURNING id_contacto
+          ` as any[]
+
+          if (nuevoContacto && nuevoContacto.length > 0) {
+            contactoId = nuevoContacto[0].id_contacto
+            insertados++
+            console.log(`✅ Nuevo contacto creado ID: ${contactoId}`)
+          }
+        }
+
+        // Si hay campaña y tenemos un contactoId, crear la asociación
+        if (campanhaId && contactoId) {
+          try {
+            await prisma.$queryRaw`
+              INSERT INTO cliente_campanha (id_contacto, id_campanha, fecha_asociacion)
+              VALUES (${contactoId}, ${parseInt(campanhaId)}, NOW())
+            `
+            asociados++
+            console.log(`📋 Contacto ${contactoId} asociado con campaña ${campanhaId}`)
+          } catch (assocError) {
+            console.log(`⚠️ Error al asociar contacto ${contactoId} con campaña ${campanhaId}:`, assocError)
+            // No fallar por error de asociación
+          }
         }
 
       } catch (insertError) {
-        console.error(`❌ Error al insertar contacto:`, insertError)
+        console.error(`❌ Error al procesar contacto:`, insertError)
         errores.push({
           fila: contacto.fila,
           nombres: contacto.nombres,
@@ -105,18 +151,19 @@ export async function POST(request: Request) {
       }
     }
 
-    console.log(`✅ Insertados ${insertados} contactos de ${contactosParaInsertar.length}`)
+    console.log(`✅ Insertados ${insertados} contactos nuevos, ${asociados} asociados a campaña de ${contactosValidos.length} procesados`)
 
     // Log successful campaign association
-    if (campanhaId && insertados > 0) {
-      console.log(`📋 ${insertados} contactos asociados con campaña ${campanhaId}`)
+    if (campanhaId && asociados > 0) {
+      console.log(`📋 ${asociados} contactos asociados con campaña ${campanhaId}`)
     }
 
     return NextResponse.json(serializeBigInt({
       success: true,
-      message: `Se insertaron ${insertados} contactos exitosamente`,
+      message: `Se procesaron ${asociados} contactos exitosamente`,
       insertados,
-      omitidos: contactos.length - contactosParaInsertar.length,
+      asociados,
+      omitidos: contactos.length - contactosValidos.length,
       errores: errores.length > 0 ? errores : undefined,
       totalProcesados: contactos.length
     }))

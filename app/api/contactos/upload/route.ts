@@ -64,7 +64,9 @@ export async function POST(request: Request) {
         const mapField = (possibleNames: string[]) => {
           for (const name of possibleNames) {
             const value = row[name] || row[name.toLowerCase()] || row[name.toUpperCase()]
-            if (value) return value
+            if (value !== null && value !== undefined && String(value).trim() !== '') {
+              return String(value).trim()
+            }
           }
           return null
         }
@@ -92,22 +94,22 @@ export async function POST(request: Request) {
         const warnings: string[] = []
 
         // Validaciones obligatorias
-        if (!contacto.nombres || contacto.nombres.trim() === '') {
+        if (!contacto.nombres) {
           errors.push('Nombres es obligatorio')
         }
 
-        if (!contacto.telefono || contacto.telefono.trim() === '') {
+        if (!contacto.telefono) {
           errors.push('Teléfono es obligatorio')
         } else {
           // Validar formato de teléfono (básico)
-          const telefono = contacto.telefono.toString().replace(/\D/g, '')
+          const telefono = String(contacto.telefono).replace(/\D/g, '')
           if (telefono.length < 9) {
             errors.push('Teléfono debe tener al menos 9 dígitos')
           }
         }
 
         // Validaciones opcionales con warnings
-        if (!contacto.correo || contacto.correo.trim() === '') {
+        if (!contacto.correo) {
           warnings.push('Email no proporcionado')
         } else {
           // Validar formato de email básico
@@ -117,7 +119,7 @@ export async function POST(request: Request) {
           }
         }
 
-        if (!contacto.distrito || contacto.distrito.trim() === '') {
+        if (!contacto.distrito) {
           warnings.push('Distrito no proporcionado')
         }
 
@@ -164,27 +166,30 @@ export async function POST(request: Request) {
       const telefonosDB = new Set(telefonosExistentes.map(t => t.telefono))
       const correosDB = new Set(correosExistentes.map(c => c.correo))
 
-      // Marcar duplicados con la base de datos
+      // Marcar contactos que ya existen en la base de datos (solo informativo)
       contactosValidados.forEach((contacto: any) => {
         if (contacto.telefono) {
           const telefono = contacto.telefono.toString().replace(/\D/g, '')
           if (telefonosDB.has(telefono)) {
-            contacto.warnings.push('Teléfono ya existe en la base de datos (se omitirá)')
-            contacto.exists = true
+            contacto.warnings.push('Contacto ya existe en la base de datos')
+            contacto.existsInDB = true
           }
         }
 
         if (contacto.correo && correosDB.has(contacto.correo.toLowerCase())) {
-          contacto.warnings.push('Email ya existe en la base de datos (se omitirá)')
-          contacto.exists = true
+          if (!contacto.existsInDB) {
+            contacto.warnings.push('Email ya existe en la base de datos')
+            contacto.existsInDB = true
+          }
         }
       })
 
       const resumen = {
         totalFilas: contactosValidados.length,
-        validos: contactosValidados.filter(c => c.valid && !c.exists).length,
+        validos: contactosValidados.filter(c => c.valid).length,
         conErrores: contactosValidados.filter(c => !c.valid).length,
-        duplicados: contactosValidados.filter(c => c.exists).length,
+        duplicadosEnArchivo: contactosValidados.filter(c => c.exists).length,
+        existentesEnDB: contactosValidados.filter(c => c.existsInDB).length,
         conWarnings: contactosValidados.filter(c => c.warnings.length > 0 && c.valid).length
       }
 

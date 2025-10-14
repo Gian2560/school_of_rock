@@ -46,12 +46,31 @@ export async function GET(_request: Request, { params }: Params) {
       return NextResponse.json({ message: "Formato de ID inválido" }, { status: 400 });
     }
 
-    // Firestore: colección “fidelizacion”
+    // Firestore: colección "sor"
     const telefonoSinMas = celularFormatted.startsWith("+")
       ? celularFormatted.slice(1)
       : celularFormatted;
 
-    const celularesParaBuscar = [celularFormatted, telefonoSinMas];
+    // Crear todas las variaciones posibles del número
+    const celularesParaBuscar = [
+      celularFormatted,           // +51925162342
+      telefonoSinMas,            // 51925162342
+    ];
+
+    // Si el número tiene el prefijo 51, agregar la versión sin él
+    if (telefonoSinMas.startsWith("51") && telefonoSinMas.length > 2) {
+      const numeroSin51 = telefonoSinMas.slice(2); // 925162342
+      celularesParaBuscar.push(numeroSin51);
+    }
+    
+    // Si el número NO tiene prefijo 51, agregar la versión con él
+    else if (!telefonoSinMas.startsWith("51") && telefonoSinMas.length === 9) {
+      const numeroCon51 = "51" + telefonoSinMas; // 51925162342
+      celularesParaBuscar.push(numeroCon51);
+      celularesParaBuscar.push("+" + numeroCon51); // +51925162342
+    }
+
+    console.log("🔍 Buscando en Firebase con números:", celularesParaBuscar);
 
     // NOTA: los filtros "in" requieren que el campo exista y haya índices
     const mensajesSnap = await adminDB
