@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { BarChart3, Users, CheckSquare, CalendarIcon, Megaphone, LogOut, Music } from "lucide-react"
+import { BarChart3, Users, CheckSquare, CalendarIcon, Megaphone, LogOut, Music, MessageCircle } from "lucide-react"
 import { signOut, useSession } from "next-auth/react";
 interface SidebarProps {
   activeSection: string
@@ -17,6 +17,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
     { id: "tasks", label: "Centro de tareas", icon: CheckSquare },
     { id: "calendar", label: "Calendario", icon: CalendarIcon },
     { id: "campaigns", label: "Campañas", icon: Megaphone },
+    { id: "templates", label: "Plantillas WhatsApp", icon: MessageCircle },
   ]
 const handleLogout = () => {
     signOut({ callbackUrl: "/login" }); // Cierra sesión y redirige al login

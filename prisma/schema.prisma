@@ -26,18 +26,20 @@ model accion_comercial {
 }
 
 model campanha {
-  id_campanha     Int       @id @default(autoincrement())
-  nombre_campanha String    @db.VarChar(100)
+  id_campanha     Int        @id @default(autoincrement())
+  nombre_campanha String     @db.VarChar(100)
   descripcion     String?
-  fecha_creacion  DateTime? @default(now()) @db.Timestamp(6)
-  estado_campanha String?   @default("activa") @db.VarChar(25)
+  fecha_creacion  DateTime?  @default(now()) @db.Timestamp(6)
+  estado_campanha String?    @default("activa") @db.VarChar(25)
   mensaje_cliente String?
-  fecha_inicio    DateTime? @default(now()) @db.Timestamp(6)
-  fecha_fin       DateTime? @db.Timestamp(6)
-  num_clientes    Int?      @default(0)
-  tipo            String    @default("in") @db.VarChar(10)
+  fecha_inicio    DateTime?  @default(now()) @db.Timestamp(6)
+  fecha_fin       DateTime?  @db.Timestamp(6)
+  num_clientes    Int?       @default(0)
+  tipo            String     @default("in") @db.VarChar(10)
   id_template     Int?
-  template        template? @relation(fields: [id_template], references: [id_template], onUpdate: NoAction)
+  plantilla_id    Int?
+  template        template?  @relation(fields: [id_template], references: [id_template], onUpdate: NoAction)
+  plantilla       plantilla? @relation(fields: [plantilla_id], references: [id], map: "fk_campanha_plantilla")
 }
 
 model cita {
@@ -281,4 +283,20 @@ model mensaje_status_event {
   conversation_json Json?
   errors_json       Json?
   created_at        DateTime @default(now()) @db.Timestamp(6)
+}
+
+model plantilla {
+  id              Int        @id @default(autoincrement())
+  nombre          String     @db.VarChar(100)
+  mensaje_cliente String
+  nombre_meta     String?    @db.VarChar(100)
+  meta_id         String?    @db.VarChar(100)
+  estado_meta     String?    @default("PENDING") @db.VarChar(50)
+  categoria       String?    @default("MARKETING") @db.VarChar(50)
+  idioma          String?    @default("es") @db.VarChar(10)
+  header          String?
+  footer          String?
+  created_at      DateTime?  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?  @db.Timestamp(6)
+  campanha        campanha[]
 }
