@@ -1,14 +1,18 @@
 // app/api/contactos/nuevas/route.ts
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+export const runtime = 'nodejs';
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 // Helpers para logs bonitos
 const fmt = (d: Date) => isNaN(d.getTime()) ? "Invalid Date" : d.toISOString();
 
-export async function GET(request: Request) {
+export async function GET(req: Request) {
   const t0 = Date.now();
   try {
-    const url = new URL(request.url);
+    const url = new URL(req.url);
 
     // --- Parámetros
     const page     = Math.max(parseInt(url.searchParams.get("page") || "1", 10), 1);
