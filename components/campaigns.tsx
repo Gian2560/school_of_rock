@@ -16,6 +16,9 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Upload, Send, MessageCircle, TrendingUp, Plus, Download, FileText, CheckCircle, AlertTriangle, X } from "lucide-react"
 
+// Cambia esto por tu URL real o usa process.env.NEXT_PUBLIC_CLOUD_RUN_URL
+const CLOUD_RUN_URL = process.env.NEXT_PUBLIC_CLOUD_RUN_URL || "https://your-cloud-run-url"
+
 // Hook para obtener campañas desde la API
 function useCampanas() {
   const [campanas, setCampanas] = useState<any[]>([])
@@ -84,7 +87,8 @@ export default function Campaigns() {
   const { toast } = useToast()
 
   // Estados para crear campaña
-  const [isCreating, setIsCreating] = useState(false)
+  const [isCreatingCampaign, setIsCreatingCampaign] = useState(false)
+  const [isCampaignDialogOpen, setIsCampaignDialogOpen] = useState(false)
   const [newCampaign, setNewCampaign] = useState({
     name: "",
     description: "",
@@ -101,6 +105,7 @@ export default function Campaigns() {
 
   // Estados para crear template
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false)
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
   const [newTemplate, setNewTemplate] = useState({
     name: "",
     message: ""
@@ -145,7 +150,7 @@ export default function Campaigns() {
     }
 
     try {
-      setIsCreating(true)
+      setIsCreatingCampaign(true)
       
       const payload = {
         nombre_campanha: newCampaign.name,
@@ -166,12 +171,7 @@ export default function Campaigns() {
           description: `La campaña "${newCampaign.name}" fue creada correctamente.`,
         })
         refetchCampanas()
-        setNewCampaign({ 
-          name: "", 
-          description: "", 
-          selectedTemplate: ""
-        })
-        setIsCreating(false)
+        resetCampaignStates()
       } else {
         const error = await response.json()
         toast({
@@ -188,7 +188,7 @@ export default function Campaigns() {
         variant: "destructive"
       })
     } finally {
-      setIsCreating(false)
+      setIsCreatingCampaign(false)
     }
   }
 
@@ -219,8 +219,7 @@ export default function Campaigns() {
           description: `El template "${newTemplate.name}" fue creado correctamente.`,
         })
         refetchTemplates()
-        setNewTemplate({ name: "", message: "" })
-        setIsCreatingTemplate(false)
+        resetTemplateStates()
       } else {
         const error = await response.json()
         toast({
@@ -246,8 +245,69 @@ export default function Campaigns() {
       ...newCampaign,
       selectedTemplate: templateId
     })
-    setIsCreating(true)
+    setIsCampaignDialogOpen(true)
   }
+
+  const resetCampaignStates = () => {
+    setNewCampaign({ 
+      name: "", 
+      description: "", 
+      selectedTemplate: ""
+    })
+    setIsCreatingCampaign(false)
+    setIsCampaignDialogOpen(false)
+  }
+
+  const resetTemplateStates = () => {
+    setNewTemplate({ name: "", message: "" })
+    setIsCreatingTemplate(false)
+    setIsTemplateDialogOpen(false)
+  }
+
+  // Enviar campaña a servicio externo
+  const sendCampaignMessages = async (campaignId: string) => {
+    try {
+      const response = await fetch(`${CLOUD_RUN_URL}/api/campaigns/${campaignId}/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          campaignId: campaignId,
+          callbackUrl: `${window.location.origin}/api/campanas/${campaignId}/callback`
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("❌ Error al enviar campaña via Cloud Function:", error);
+      throw error;
+    }
+  };
+
+  // Handler para botón Enviar
+  const handleSendCampaign = async (campaignId: string) => {
+    toast({ title: "Enviando campaña...", description: "Procesando envío de mensajes." });
+    try {
+      await sendCampaignMessages(campaignId);
+      toast({
+        title: "Campaña enviada",
+        description: `La campaña fue enviada correctamente.`,
+      });
+      refetchCampanas();
+    } catch (error) {
+      toast({
+        title: "Error al enviar campaña",
+        description: (error as Error).message || "No se pudo enviar la campaña",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Funciones para upload de Excel
   const handleFileUpload = async (file: File) => {
@@ -318,7 +378,7 @@ export default function Campaigns() {
         
         toast({
           title: "Contactos importados",
-          description: `Se insertaron ${result.insertados} contactos exitosamente`
+          description: `Se procesaron ${result.asociados} contactos exitosamente. ${result.insertados} nuevos contactos creados.`
         })
         
         // Refrescar campañas para mostrar nuevos contactos
@@ -481,15 +541,15 @@ export default function Campaigns() {
                     </div>
                     <div className="bg-card border rounded-lg p-4">
                       <div className="text-2xl font-bold text-yellow-600">
-                        {previewData.resumen.duplicados}
+                        {previewData.resumen.duplicadosEnArchivo || 0}
                       </div>
-                      <p className="text-sm text-muted-foreground">Duplicados</p>
+                      <p className="text-sm text-muted-foreground">Duplicados en archivo</p>
                     </div>
                     <div className="bg-card border rounded-lg p-4">
                       <div className="text-2xl font-bold text-blue-600">
-                        {previewData.resumen.totalFilas}
+                        {previewData.resumen.existentesEnDB || 0}
                       </div>
-                      <p className="text-sm text-muted-foreground">Total</p>
+                      <p className="text-sm text-muted-foreground">Ya en BD</p>
                     </div>
                   </div>
                   
@@ -514,14 +574,21 @@ export default function Campaigns() {
                             <TableCell>{contacto.correo}</TableCell>
                             <TableCell>
                               {contacto.valid && !contacto.exists ? (
-                                <Badge className="bg-green-100 text-green-800">
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Válido
-                                </Badge>
+                                contacto.existsInDB ? (
+                                  <Badge className="bg-blue-100 text-blue-800">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Existe en BD
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-green-100 text-green-800">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Válido
+                                  </Badge>
+                                )
                               ) : contacto.exists ? (
                                 <Badge variant="secondary">
                                   <X className="w-3 h-3 mr-1" />
-                                  Duplicado
+                                  Duplicado en archivo
                                 </Badge>
                               ) : (
                                 <Badge variant="destructive">
@@ -611,7 +678,10 @@ export default function Campaigns() {
             </DialogContent>
           </Dialog>
           
-          <Dialog open={isCreating} onOpenChange={setIsCreating}>
+          <Dialog open={isCampaignDialogOpen} onOpenChange={(open) => {
+            if (!open) resetCampaignStates()
+            setIsCampaignDialogOpen(open)
+          }}>
             <DialogTrigger asChild>
               <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
                 <MessageCircle className="w-4 h-4 mr-2" />
@@ -674,15 +744,15 @@ export default function Campaigns() {
                 <div className="flex justify-end gap-2 pt-4">
                   <Button 
                     variant="outline" 
-                    onClick={() => setIsCreating(false)}
+                    onClick={resetCampaignStates}
                   >
                     Cancelar
                   </Button>
                   <Button 
                     onClick={handleCreateCampaign}
-                    disabled={isCreating || !newCampaign.name.trim()}
+                    disabled={isCreatingCampaign || !newCampaign.name.trim()}
                   >
-                    {isCreating ? "Creando..." : "Crear Campaña"}
+                    {isCreatingCampaign ? "Creando..." : "Crear Campaña"}
                   </Button>
                 </div>
               </div>
@@ -731,7 +801,12 @@ export default function Campaigns() {
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleSendCampaign(campaign.id)}
+                >
                   <Send className="w-3 h-3 mr-1" />
                   Enviar
                 </Button>
@@ -750,7 +825,10 @@ export default function Campaigns() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Plantillas de Mensajes</CardTitle>
-            <Dialog open={isCreatingTemplate} onOpenChange={setIsCreatingTemplate}>
+            <Dialog open={isTemplateDialogOpen} onOpenChange={(open) => {
+              if (!open) resetTemplateStates()
+              setIsTemplateDialogOpen(open)
+            }}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Plus className="w-4 h-4 mr-2" />
@@ -782,7 +860,7 @@ export default function Campaigns() {
                     />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setIsCreatingTemplate(false)}>
+                    <Button variant="outline" onClick={resetTemplateStates}>
                       Cancelar
                     </Button>
                     <Button onClick={handleCreateTemplate} disabled={isCreatingTemplate}>

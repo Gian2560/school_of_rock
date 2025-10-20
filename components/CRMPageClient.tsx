@@ -9,6 +9,7 @@ import NewConversations from "@/components/new-conversations";
 import { TaskCenter } from "@/components/task-center";
 import { Calendar } from "@/components/calendar";
 import Campaigns from "@/components/campaigns";
+import Templates from "@/components/templates";
 
 export default function CRMPageClient() {
   const [activeSection, setActiveSection] = useState("contactos");
@@ -29,6 +30,8 @@ export default function CRMPageClient() {
         return <Calendar />;
       case "campaigns":
         return <Campaigns />;
+      case "templates":
+        return <Templates />;
       default:
         return <Dashboard />;
     }
