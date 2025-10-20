@@ -27,25 +27,26 @@ export async function POST(request: NextRequest) {
     console.log(`[SYNC] ${plantillasMeta.length} plantillas obtenidas de Meta`);
 
     // 2. Obtener plantillas existentes en BD
-    let plantillasDB: any[] = [];
+    let templatesDB: any[] = [];
     try {
-      plantillasDB = await (prisma as any).plantilla.findMany({
-        select: {
-          id: true,
-          nombre_meta: true,
-          estado_meta: true,
-          meta_id: true
-        }
-      });
-      console.log(`[DB] ${plantillasDB.length} plantillas existentes en BD`);
+      templatesDB = await prisma.$queryRaw`
+        SELECT 
+          id_template,
+          nombre_meta,
+          estado_meta,
+          meta_id
+        FROM template
+        WHERE nombre_meta IS NOT NULL
+      ` as any[];
+      console.log(`[DB] ${templatesDB.length} plantillas existentes en BD`);
     } catch (dbError: any) {
-      console.warn('[WARNING] La tabla plantilla no existe o está vacía, se crearán todas las plantillas');
-      plantillasDB = [];
+      console.warn('[WARNING] La tabla template no existe o está vacía, se crearán todas las plantillas');
+      templatesDB = [];
     }
 
     // 3. Crear un mapa de plantillas existentes por nombre_meta
-    const plantillasDBMap = new Map(
-      plantillasDB.map(p => [p.nombre_meta, p])
+    const templatesDBMap = new Map(
+      templatesDB.map(t => [t.nombre_meta, t])
     );
 
     let creadas = 0;
@@ -55,42 +56,55 @@ export async function POST(request: NextRequest) {
     // 4. Sincronizar cada plantilla de Meta
     for (const plantillaMeta of plantillasMeta) {
       try {
-        const plantillaExistente = plantillasDBMap.get(plantillaMeta.nombre_meta);
+        const templateExistente = templatesDBMap.get(plantillaMeta.nombre_meta);
 
-        if (plantillaExistente) {
+        if (templateExistente) {
           // ACTUALIZAR: Si el estado cambió en Meta
-          if (plantillaExistente.estado_meta !== plantillaMeta.estado_meta) {
-            await (prisma as any).plantilla.update({
-              where: { id: plantillaExistente.id },
-              data: {
-                estado_meta: plantillaMeta.estado_meta,
-                meta_id: plantillaMeta.meta_id,
-                mensaje_cliente: plantillaMeta.mensaje_cliente,
-                header: plantillaMeta.header,
-                footer: plantillaMeta.footer,
-                updated_at: new Date()
-              }
-            });
+          if (templateExistente.estado_meta !== plantillaMeta.estado_meta) {
+            await prisma.$queryRaw`
+              UPDATE template 
+              SET 
+                estado_meta = ${plantillaMeta.estado_meta},
+                meta_id = ${plantillaMeta.meta_id},
+                mensaje = ${plantillaMeta.mensaje || ''},
+                header = ${plantillaMeta.header},
+                footer = ${plantillaMeta.footer},
+                updated_at = NOW()
+              WHERE id_template = ${templateExistente.id_template}
+            `;
             actualizadas++;
             console.log(`[UPDATE] Actualizada: ${plantillaMeta.nombre}`);
           }
         } else {
           // CREAR: Nueva plantilla de Meta en BD
-          await (prisma as any).plantilla.create({
-            data: {
-              nombre: plantillaMeta.nombre,
-              mensaje_cliente: plantillaMeta.mensaje_cliente || '',
-              nombre_meta: plantillaMeta.nombre_meta,
-              meta_id: plantillaMeta.meta_id,
-              estado_meta: plantillaMeta.estado_meta,
-              categoria: plantillaMeta.categoria,
-              idioma: plantillaMeta.idioma,
-              header: plantillaMeta.header,
-              footer: plantillaMeta.footer,
-              created_at: new Date(),
-              updated_at: new Date()
-            }
-          });
+          const nombreTemplate = plantillaMeta.nombre_meta || plantillaMeta.nombre;
+          await prisma.$queryRaw`
+            INSERT INTO template (
+              nombre,
+              mensaje,
+              nombre_meta,
+              meta_id,
+              estado_meta,
+              categoria,
+              idioma,
+              header,
+              footer,
+              created_at,
+              updated_at
+            ) VALUES (
+              ${nombreTemplate},
+              ${plantillaMeta.mensaje || ''},
+              ${nombreTemplate},
+              ${plantillaMeta.meta_id},
+              ${plantillaMeta.estado_meta},
+              ${plantillaMeta.categoria || 'MARKETING'},
+              ${plantillaMeta.idioma || 'es'},
+              ${plantillaMeta.header},
+              ${plantillaMeta.footer},
+              NOW(),
+              NOW()
+            )
+          `;
           creadas++;
           console.log(`[CREATE] Creada: ${plantillaMeta.nombre}`);
         }
@@ -113,7 +127,7 @@ export async function POST(request: NextRequest) {
         creadas,
         actualizadas,
         errores,
-        total_bd: plantillasDB.length + creadas
+        total_bd: templatesDB.length + creadas
       }
     });
 

@@ -32,9 +32,15 @@ export async function GET() {
         id_template,
         nombre,
         mensaje,
+        nombre_meta,
+        meta_id,
+        estado_meta,
+        categoria,
+        idioma,
+        header,
+        footer,
         created_at,
-        template_content_sid,
-        parametro
+        updated_at
       FROM template
       ORDER BY created_at DESC
     ` as any[]
@@ -43,9 +49,15 @@ export async function GET() {
       id: template.id_template,
       name: template.nombre,
       message: template.mensaje,
+      metaName: template.nombre_meta,
+      metaId: template.meta_id,
+      metaStatus: template.estado_meta,
+      category: template.categoria,
+      language: template.idioma,
+      header: template.header,
+      footer: template.footer,
       createdAt: template.created_at,
-      hasParameters: template.parametro,
-      contentSid: template.template_content_sid,
+      updatedAt: template.updated_at,
       originalData: template
     }))
 
@@ -68,8 +80,13 @@ export async function POST(request: Request) {
     const { 
       nombre, 
       mensaje, 
-      template_content_sid = '',
-      parametro = false
+      nombre_meta = null,
+      meta_id = null,
+      estado_meta = 'PENDING',
+      categoria = 'MARKETING',
+      idioma = 'es',
+      header = null,
+      footer = null
     } = body
 
     // Validaciones
@@ -94,15 +111,27 @@ export async function POST(request: Request) {
       INSERT INTO template (
         nombre, 
         mensaje, 
-        template_content_sid,
-        parametro,
-        created_at
+        nombre_meta,
+        meta_id,
+        estado_meta,
+        categoria,
+        idioma,
+        header,
+        footer,
+        created_at,
+        updated_at
       )
       VALUES (
         ${nombre}, 
         ${mensaje}, 
-        ${template_content_sid},
-        ${parametro},
+        ${nombre_meta},
+        ${meta_id},
+        ${estado_meta},
+        ${categoria},
+        ${idioma},
+        ${header},
+        ${footer},
+        NOW(),
         NOW()
       )
       RETURNING *

@@ -4,12 +4,47 @@ import {createMetaTemplate, getAllMetaTemplates, updateMetaTemplate, deleteMetaT
 
 export async function GET(request: NextRequest) {
   try {
+    // Obtener plantillas de la base de datos local (tabla template)
+    const templatesDB = await prisma.$queryRaw`
+      SELECT 
+        id_template,
+        nombre,
+        mensaje,
+        nombre_meta,
+        meta_id,
+        estado_meta,
+        categoria,
+        idioma,
+        header,
+        footer,
+        created_at,
+        updated_at
+      FROM template
+      ORDER BY created_at DESC
+    ` as any[];
+
+    // También obtener de Meta para tener datos completos
     const metaResult = await getAllMetaTemplates();
-    if (!metaResult.success) {
-      return NextResponse.json({ error: metaResult.error }, { status: 500 });
-    }
-    return NextResponse.json(metaResult.plantillas);
+    
+    // Combinar datos de BD con Meta si es necesario
+    const templatesFormateados = templatesDB.map((template: any) => ({
+      id: template.id_template,
+      nombre: template.nombre,
+      mensaje_cliente: template.mensaje,
+      nombre_meta: template.nombre_meta,
+      meta_id: template.meta_id,
+      estado_meta: template.estado_meta,
+      categoria: template.categoria,
+      idioma: template.idioma,
+      header: template.header,
+      footer: template.footer,
+      created_at: template.created_at,
+      updated_at: template.updated_at
+    }));
+
+    return NextResponse.json(templatesFormateados);
   } catch (error: any) {
+    console.error("Error al obtener plantillas:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -34,23 +69,42 @@ export async function POST(request: NextRequest) {
     let bdResult: any = null;
     if (guardar_en_bd) {
       try {
-        const plantillaDB = await (prisma as any).plantilla.create({
-          data: {
+        // Asegurar que nombre y nombre_meta sean iguales
+        const nombreTemplate = nombre;
+        const nombreMeta = metaResult.nombre_meta || nombre;
+
+        const templateDB = await prisma.$queryRaw`
+          INSERT INTO template (
             nombre, 
-            mensaje_cliente: mensaje, 
-            nombre_meta: metaResult.nombre_meta,
-            meta_id: metaResult.meta_id, 
-            estado_meta: metaResult.estado,
-            categoria: categoria || 'MARKETING', 
-            idioma: idioma || 'es',
-            header: header || null, 
-            footer: footer || null,
-            created_at: new Date(), 
-            updated_at: new Date()
-          }
-        });
-        bdResult = { success: true, id: plantillaDB.id };
+            mensaje, 
+            nombre_meta,
+            meta_id,
+            estado_meta,
+            categoria,
+            idioma,
+            header,
+            footer,
+            created_at,
+            updated_at
+          ) VALUES (
+            ${nombreTemplate},
+            ${mensaje},
+            ${nombreMeta},
+            ${metaResult.meta_id},
+            ${metaResult.estado},
+            ${categoria || 'MARKETING'},
+            ${idioma || 'es'},
+            ${header || null},
+            ${footer || null},
+            NOW(),
+            NOW()
+          ) RETURNING id_template
+        ` as any[];
+        
+        bdResult = { success: true, id: templateDB[0].id_template };
+        console.log(`✅ Template creado en BD - nombre: ${nombreTemplate}, nombre_meta: ${nombreMeta}`);
       } catch (dbError: any) {
+        console.error("Error al guardar en BD:", dbError);
         bdResult = { success: false, error: dbError.message };
       }
     }
@@ -59,10 +113,10 @@ export async function POST(request: NextRequest) {
       success: true,
       plantilla: {
         id: metaResult.meta_id, 
-        nombre, 
-        nombre_meta: metaResult.nombre_meta,
+        nombre: nombre, 
+        nombre_meta: nombre, // Asegurar que sean iguales
         estado_meta: metaResult.estado, 
-        mensaje_cliente: mensaje,
+        mensaje: mensaje,
         categoria: categoria || 'MARKETING', 
         idioma: idioma || 'es'
       },
@@ -93,32 +147,39 @@ export async function PUT(request: NextRequest) {
 
     // Actualizar en BD
     try {
-      const plantillaDB = await (prisma as any).plantilla.update({
-        where: { id: parseInt(id) },
-        data: {
-          nombre,
-          mensaje_cliente: mensaje,
-          categoria: categoria || 'MARKETING',
-          idioma: idioma || 'es',
-          header: header || null,
-          footer: footer || null,
-          estado_meta: metaResult.estado,
-          updated_at: new Date()
-        }
-      });
+      const templateDB = await prisma.$queryRaw`
+        UPDATE template 
+        SET 
+          nombre = ${nombre},
+          nombre_meta = ${nombre},
+          mensaje = ${mensaje},
+          categoria = ${categoria || 'MARKETING'},
+          idioma = ${idioma || 'es'},
+          header = ${header || null},
+          footer = ${footer || null},
+          estado_meta = ${metaResult.estado},
+          updated_at = NOW()
+        WHERE id_template = ${parseInt(id)}
+        RETURNING *
+      ` as any[];
+
+      if (templateDB.length === 0) {
+        return NextResponse.json({ success: false, error: 'Plantilla no encontrada' }, { status: 404 });
+      }
 
       return NextResponse.json({
         success: true,
         plantilla: {
-          id: plantillaDB.id,
-          nombre: plantillaDB.nombre,
-          mensaje_cliente: plantillaDB.mensaje_cliente,
-          estado_meta: plantillaDB.estado_meta,
-          categoria: plantillaDB.categoria,
-          idioma: plantillaDB.idioma
+          id: templateDB[0].id_template,
+          nombre: templateDB[0].nombre,
+          mensaje_cliente: templateDB[0].mensaje,
+          estado_meta: templateDB[0].estado_meta,
+          categoria: templateDB[0].categoria,
+          idioma: templateDB[0].idioma
         }
       });
     } catch (dbError: any) {
+      console.error("Error al actualizar en BD:", dbError);
       return NextResponse.json({ success: false, error: 'Error al actualizar en base de datos: ' + dbError.message }, { status: 500 });
     }
   } catch (error: any) {
@@ -135,18 +196,19 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Obtener la plantilla para el nombre_meta si solo se proporciona id
-    let plantillaToDelete: any = null;
+    let templateToDelete: any = null;
     if (id && !nombre_meta) {
-      plantillaToDelete = await (prisma as any).plantilla.findUnique({
-        where: { id: parseInt(id) }
-      });
+      const templateResult = await prisma.$queryRaw`
+        SELECT * FROM template WHERE id_template = ${parseInt(id)} LIMIT 1
+      ` as any[];
       
-      if (!plantillaToDelete) {
+      if (templateResult.length === 0) {
         return NextResponse.json({ success: false, error: 'Plantilla no encontrada' }, { status: 404 });
       }
+      templateToDelete = templateResult[0];
     }
 
-    const metaNombre = nombre_meta || plantillaToDelete?.nombre_meta;
+    const metaNombre = nombre_meta || templateToDelete?.nombre_meta;
     
     if (metaNombre) {
       // Eliminar de Meta
@@ -158,22 +220,29 @@ export async function DELETE(request: NextRequest) {
 
     // Eliminar de BD
     try {
-      let deletedPlantilla: any;
+      let deletedTemplate: any;
       if (id) {
-        deletedPlantilla = await (prisma as any).plantilla.delete({
-          where: { id: parseInt(id) }
-        });
+        const deleteResult = await prisma.$queryRaw`
+          DELETE FROM template WHERE id_template = ${parseInt(id)} RETURNING *
+        ` as any[];
+        deletedTemplate = deleteResult[0];
       } else {
-        deletedPlantilla = await (prisma as any).plantilla.delete({
-          where: { nombre_meta: metaNombre }
-        });
+        const deleteResult = await prisma.$queryRaw`
+          DELETE FROM template WHERE nombre_meta = ${metaNombre} RETURNING *
+        ` as any[];
+        deletedTemplate = deleteResult[0];
+      }
+
+      if (!deletedTemplate) {
+        return NextResponse.json({ success: false, error: 'No se pudo eliminar la plantilla' }, { status: 500 });
       }
 
       return NextResponse.json({
         success: true,
-        message: `Plantilla "${deletedPlantilla.nombre}" eliminada correctamente`
+        message: `Plantilla "${deletedTemplate.nombre}" eliminada correctamente`
       });
     } catch (dbError: any) {
+      console.error("Error al eliminar de BD:", dbError);
       return NextResponse.json({ success: false, error: 'Error al eliminar de base de datos: ' + dbError.message }, { status: 500 });
     }
   } catch (error: any) {

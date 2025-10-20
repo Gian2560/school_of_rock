@@ -4,7 +4,7 @@ interface MetaTemplate {
   nombre: string;
   nombre_meta: string;
   meta_id: string;
-  mensaje_cliente: string;
+  mensaje: string; // Cambiado de mensaje_cliente a mensaje
   estado_meta: string;
   categoria: string;
   idioma: string;
@@ -55,8 +55,11 @@ const META_API_CONFIG = {
 export async function getAllMetaTemplates(): Promise<MetaApiResponse> {
   try {
     if (!META_API_CONFIG.accessToken || !META_API_CONFIG.businessAccountId) {
-      console.warn('⚠️ Meta API no configurada, usando datos de prueba');
-      return getMockTemplates();
+      console.warn('⚠️ Meta API no configurada');
+      return {
+        success: false,
+        error: 'Meta API no está configurada. Configure las variables de entorno META_ACCESS_TOKEN y META_BUSINESS_ACCOUNT_ID'
+      };
     }
 
     const url = `${META_API_CONFIG.baseUrl}/${META_API_CONFIG.businessAccountId}/message_templates`;
@@ -81,7 +84,7 @@ export async function getAllMetaTemplates(): Promise<MetaApiResponse> {
       nombre: template.name,
       nombre_meta: template.name,
       meta_id: template.id,
-      mensaje_cliente: template.components?.find((c: any) => c.type === 'BODY')?.text || '',
+      mensaje: template.components?.find((c: any) => c.type === 'BODY')?.text || '',
       estado_meta: template.status,
       categoria: template.category,
       idioma: template.language,
@@ -99,9 +102,10 @@ export async function getAllMetaTemplates(): Promise<MetaApiResponse> {
   } catch (error: any) {
     console.error('❌ Error al obtener plantillas de Meta:', error);
     
-    // En caso de error, devolver datos de prueba
-    console.log('🔄 Usando datos de prueba...');
-    return getMockTemplates();
+    return {
+      success: false,
+      error: `Error al conectar con Meta API: ${error.message}`
+    };
   }
 }
 
@@ -147,8 +151,11 @@ export async function createMetaTemplate(templateData: CreateTemplateData): Prom
     }
 
     if (!META_API_CONFIG.accessToken || !META_API_CONFIG.businessAccountId) {
-      console.warn('⚠️ Meta API no configurada, simulando creación');
-      return getMockCreateResponse(nombre, idioma);
+      console.warn('⚠️ Meta API no configurada');
+      return {
+        success: false,
+        error: 'Meta API no está configurada. Configure las variables de entorno META_ACCESS_TOKEN y META_BUSINESS_ACCOUNT_ID'
+      };
     }
 
     // Construir componentes de la plantilla
@@ -271,11 +278,10 @@ export async function updateMetaTemplate(templateData: any): Promise<CreateTempl
     const { id, nombre, mensaje, categoria, idioma, header, footer } = templateData;
 
     if (!META_API_CONFIG.accessToken) {
-      console.warn('⚠️ Meta API no configurada, simulando actualización');
+      console.warn('⚠️ Meta API no configurada');
       return {
-        success: true,
-        meta_id: id,
-        estado: 'PENDING'
+        success: false,
+        error: 'Meta API no está configurada para actualizar templates'
       };
     }
 
@@ -306,10 +312,10 @@ export async function updateMetaTemplate(templateData: any): Promise<CreateTempl
 export async function deleteMetaTemplate(nombreMeta: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     if (!META_API_CONFIG.accessToken || !META_API_CONFIG.businessAccountId) {
-      console.warn('⚠️ Meta API no configurada, simulando eliminación');
+      console.warn('⚠️ Meta API no configurada');
       return {
-        success: true,
-        message: `Plantilla ${nombreMeta} eliminada correctamente (simulado)`
+        success: false,
+        error: 'Meta API no está configurada para eliminar templates'
       };
     }
 
@@ -343,73 +349,3 @@ export async function deleteMetaTemplate(nombreMeta: string): Promise<{ success:
   }
 }
 
-/**
- * Datos de prueba cuando Meta API no está configurada
- */
-function getMockTemplates(): MetaApiResponse {
-  const plantillasMock: MetaTemplate[] = [
-    {
-      id: '1',
-      nombre: 'bienvenida',
-      nombre_meta: 'bienvenida_cliente_es',
-      meta_id: 'META_001',
-      mensaje_cliente: 'Hola {{1}}, bienvenido a School of Rock. ¿En qué podemos ayudarte?',
-      estado_meta: 'APPROVED',
-      categoria: 'MARKETING',
-      idioma: 'es',
-      header: null,
-      footer: 'School of Rock - Tu escuela de música',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '2',
-      nombre: 'recordatorio_clase',
-      nombre_meta: 'recordatorio_clase_es',
-      meta_id: 'META_002',
-      mensaje_cliente: 'Hola {{1}}, te recordamos que tienes clase de {{2}} mañana a las {{3}}.',
-      estado_meta: 'PENDING',
-      categoria: 'UTILITY',
-      idioma: 'es',
-      header: 'Recordatorio de Clase',
-      footer: 'School of Rock',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '3',
-      nombre: 'promocion_descuento',
-      nombre_meta: 'promocion_descuento_es',
-      meta_id: 'META_003',
-      mensaje_cliente: '🎸 ¡Oferta especial! Obtén {{1}}% de descuento en tu primera clase. Válido hasta {{2}}.',
-      estado_meta: 'REJECTED',
-      categoria: 'MARKETING',
-      idioma: 'es',
-      header: '🎵 Promoción Especial',
-      footer: 'Terms and conditions apply',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  ];
-
-  return {
-    success: true,
-    plantillas: plantillasMock
-  };
-}
-
-/**
- * Respuesta simulada para creación de plantilla
- */
-function getMockCreateResponse(nombre: string, idioma: string): CreateTemplateResponse {
-  const timestamp = Date.now();
-  const nombreMeta = `${nombre.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${idioma}_${timestamp}`;
-  const metaId = `META_${timestamp}`;
-
-  return {
-    success: true,
-    nombre_meta: nombreMeta,
-    meta_id: metaId,
-    estado: 'PENDING'
-  };
-}
