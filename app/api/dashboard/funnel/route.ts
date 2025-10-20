@@ -7,10 +7,28 @@ type FunnelPayload = {
   enrolados: number;
   eficienciaBot: number;     // llamadas/leads
   eficienciaAsesor: number;  // enrolados/llamadas
+  totalContactos: number;    // total registros en tabla contacto
+  nuevosEstaSemana: number;  // contactos con fecha_creacion en la semana actual
 };
 
 export async function GET() {
   try {
+    // Total de contactos en la tabla `contacto`
+    const totalContactos = await prisma.contacto.count();
+
+    // Calcula inicio de la semana actual (asumiendo lunes como primer día de la semana)
+    const now = new Date();
+    const day = now.getDay(); // 0 (Dom) - 6 (Sáb)
+    const daysSinceMonday = (day + 6) % 7; // convierte a 0=Mon, ..., 6=Sun
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - daysSinceMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Nuevos esta semana según fecha_creacion >= startOfWeek
+    const nuevosEstaSemana = await prisma.contacto.count({
+      where: { fecha_creacion: { gte: startOfWeek } },
+    });
+
     // 1) Leads (contactos con estado = "nuevo")
     const leadsNuevo = await prisma.contacto.count({
       where: { estado: { equals: "Nuevo", mode: "insensitive" } },
@@ -62,6 +80,8 @@ export async function GET() {
       enrolados,
       eficienciaBot,
       eficienciaAsesor,
+      totalContactos,
+      nuevosEstaSemana,
     };
 
     // evita cachear en prod

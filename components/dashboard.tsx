@@ -25,6 +25,8 @@ type FunnelAPI = {
   enrolados: number
   eficienciaBot: number
   eficienciaAsesor: number
+  totalContactos?: number
+  nuevosEstaSemana?: number
 }
 type SegmentAPIItem = { name: string; count: number; percentage: number }
 type SegmentAPIResponse = { total: number; segments: SegmentAPIItem[] }
@@ -54,12 +56,10 @@ const timeData = [
   { name: "Dom", time: 3.8 },
 ]
 
-const advisorData = [
-  { name: "María González", leads: 45, llamadas: 38, enrolados: 15, conversion: 33.3 },
-  { name: "Carlos Ruiz", leads: 52, llamadas: 41, enrolados: 18, conversion: 34.6 },
-  { name: "Ana López", leads: 38, llamadas: 32, enrolados: 12, conversion: 31.6 },
-  { name: "Luis Torres", leads: 41, llamadas: 35, enrolados: 14, conversion: 34.1 },
-]
+type Advisor = { id: number; name: string; llamadas: number; enrolados: number }
+
+// advisors will be fetched from backend
+const advisorData: Advisor[] = []
 
 // const funnelData = [
 //   { stage: "Leads", count: 176, percentage: 100 },
@@ -74,9 +74,13 @@ export function Dashboard() {
     enrolados: 0,
     eficienciaBot: 0,
     eficienciaAsesor: 0,
+    // nuevos campos vienen del backend
+    totalContactos: 0,
+    nuevosEstaSemana: 0,
   });
 
   const [segments, setSegments] = useState<SegmentAPIItem[]>([]);
+  const [advisors, setAdvisors] = useState<Advisor[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -86,11 +90,18 @@ export function Dashboard() {
           fetch("/api/dashboard/segments", { cache: "no-store" }),
         ]);
 
-        const funnelData: FunnelAPI = await funnelRes.json();
+  const funnelData: FunnelAPI = await funnelRes.json();
         setFunnel(funnelData);
 
         const segData: SegmentAPIResponse = await segRes.json();
         setSegments(segData.segments ?? []);
+        try {
+          const advRes = await fetch("/api/dashboard/advisors", { cache: "no-store" });
+          const advJson = await advRes.json();
+          setAdvisors(advJson.advisors ?? []);
+        } catch (e) {
+          console.error("Error cargando asesores:", e);
+        }
       } catch (e) {
         console.error("Error cargando dashboard:", e);
       }
@@ -153,8 +164,8 @@ export function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">176</div>
-            <p className="text-xs text-muted-foreground">+15 nuevos esta semana</p>
+            <div className="text-2xl font-bold">{funnel.totalContactos ?? 0}</div>
+            <p className="text-xs text-muted-foreground">+{funnel.nuevosEstaSemana ?? 0} nuevos esta semana</p>
           </CardContent>
         </Card>
 
@@ -169,7 +180,7 @@ export function Dashboard() {
           </CardContent>
         </Card> */}
 
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Meta Mensual</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
@@ -179,7 +190,7 @@ export function Dashboard() {
             <p className="text-xs text-muted-foreground">59/70 inscripciones</p>
             <Progress value={85} className="mt-2" />
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       {/* Conversion Funnel Visualization */}
@@ -226,34 +237,40 @@ export function Dashboard() {
             Rendimiento de Asesores
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {advisorData.map((advisor) => (
-              <div key={advisor.name} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <h3 className="font-semibold">{advisor.name}</h3>
-                  <div className="flex gap-6 mt-2 text-sm text-muted-foreground">
-                    <span>Leads: {advisor.leads}</span>
-                    <span>Llamadas: {advisor.llamadas}</span>
-                    <span>Enrolados: {advisor.enrolados}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-accent">{advisor.conversion}%</div>
-                  <p className="text-xs text-muted-foreground">Conversión</p>
-                </div>
-                <div className="ml-4">
-                  <Progress value={advisor.conversion} className="w-20" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
+          <CardContent>
+            <div className="space-y-4">
+              {advisors.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No hay datos de asesores</div>
+              ) : (
+                advisors.map((advisor) => {
+                  const conversion = advisor.llamadas > 0 ? Math.round((advisor.enrolados / advisor.llamadas) * 100) : 0;
+                  return (
+                    <div key={advisor.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{advisor.name}</h3>
+                        <div className="flex gap-6 mt-2 text-sm text-muted-foreground">
+                          <span>Llamadas: {advisor.llamadas}</span>
+                          <span>Enrolados: {advisor.enrolados}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-accent">{conversion}%</div>
+                        <p className="text-xs text-muted-foreground">Conversión</p>
+                      </div>
+                      <div className="ml-4">
+                        <Progress value={conversion} className="w-20" />
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </CardContent>
       </Card>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Conversión de Leads</CardTitle>
           </CardHeader>
@@ -269,7 +286,7 @@ export function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
-        </Card>
+        </Card> */}
 <Card>
           <CardHeader>
             <CardTitle>Segmentación de Leads</CardTitle>
@@ -328,12 +345,35 @@ export function Dashboard() {
             </ResponsiveContainer>
           </CardContent>
         </Card> */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Tareas Pendientes del Mes Actual</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Prioridad I</span>
+              <Badge variant="destructive">0</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Prioridad II</span>
+              <Badge variant="secondary">0</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Prioridad III</span>
+              <Badge variant="outline">0</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Prioridad IV</span>
+              <Badge variant="outline">0</Badge>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Próximas Actividades</CardTitle>
           </CardHeader>
@@ -360,31 +400,9 @@ export function Dashboard() {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Tareas Pendientes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Prioridad I</span>
-              <Badge variant="destructive">3</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Prioridad II</span>
-              <Badge variant="secondary">7</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Prioridad III</span>
-              <Badge variant="outline">12</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Prioridad IV</span>
-              <Badge variant="outline">8</Badge>
-            </div>
-          </CardContent>
-        </Card>
+        {/* aca iba tareas pendientes */}
       </div>
     </div>
   )
