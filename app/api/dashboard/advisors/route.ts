@@ -12,6 +12,7 @@ type AdvisorRow = {
 export async function GET() {
   try {
     // Obtener la última acción por contacto o por lead (considerando ambos)
+    //
     // Atribuimos la última acción al asesor que la realizó y luego agrupamos por asesor
     const rows: AdvisorRow[] = await prisma.$queryRaw`
       WITH last_actions AS (
