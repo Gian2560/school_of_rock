@@ -26,20 +26,18 @@ model accion_comercial {
 }
 
 model campanha {
-  id_campanha                              Int       @id @default(autoincrement())
-  nombre_campanha                          String    @db.VarChar(100)
-  descripcion                              String?
-  fecha_creacion                           DateTime? @default(now()) @db.Timestamp(6)
-  estado_campanha                          String?   @default("activa") @db.VarChar(25)
-  mensaje_cliente                          String?
-  fecha_inicio                             DateTime? @default(now()) @db.Timestamp(6)
-  fecha_fin                                DateTime? @db.Timestamp(6)
-  num_clientes                             Int?      @default(0)
-  tipo                                     String    @default("in") @db.VarChar(10)
-  id_template                              Int?
-  plantilla_id                             Int?
-  template_campanha_id_templateTotemplate  template? @relation("campanha_id_templateTotemplate", fields: [id_template], references: [id_template], onDelete: NoAction, onUpdate: NoAction)
-  template_campanha_plantilla_idTotemplate template? @relation("campanha_plantilla_idTotemplate", fields: [plantilla_id], references: [id_template], map: "fk_campanha_plantilla")
+  id_campanha     Int       @id @default(autoincrement())
+  nombre_campanha String    @db.VarChar(100)
+  descripcion     String?
+  fecha_creacion  DateTime? @default(now()) @db.Timestamp(6)
+  estado_campanha String?   @default("activa") @db.VarChar(25)
+  mensaje_cliente String?
+  fecha_inicio    DateTime? @default(now()) @db.Timestamp(6)
+  fecha_fin       DateTime? @db.Timestamp(6)
+  num_clientes    Int?      @default(0)
+  tipo            String    @default("in") @db.VarChar(10)
+  id_template     Int?
+  template        template? @relation(fields: [id_template], references: [id_template], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model cita {
@@ -264,20 +262,19 @@ model tarea {
 }
 
 model template {
-  id_template                              Int        @id(map: "plantilla_pkey") @default(autoincrement())
-  nombre                                   String     @db.VarChar(100)
-  mensaje                                  String
-  nombre_meta                              String?    @db.VarChar(100)
-  meta_id                                  String?    @db.VarChar(100)
-  estado_meta                              String?    @default("PENDING") @db.VarChar(50)
-  categoria                                String?    @default("MARKETING") @db.VarChar(50)
-  idioma                                   String?    @default("es") @db.VarChar(10)
-  header                                   String?
-  footer                                   String?
-  created_at                               DateTime?  @default(now()) @db.Timestamp(6)
-  updated_at                               DateTime?  @db.Timestamp(6)
-  campanha_campanha_id_templateTotemplate  campanha[] @relation("campanha_id_templateTotemplate")
-  campanha_campanha_plantilla_idTotemplate campanha[] @relation("campanha_plantilla_idTotemplate")
+  id_template Int        @id(map: "plantilla_pkey") @default(autoincrement())
+  nombre      String     @db.VarChar(100)
+  mensaje     String
+  nombre_meta String?    @db.VarChar(100)
+  meta_id     String?    @db.VarChar(100)
+  estado_meta String?    @default("PENDING") @db.VarChar(50)
+  categoria   String?    @default("MARKETING") @db.VarChar(50)
+  idioma      String?    @default("es") @db.VarChar(10)
+  header      String?
+  footer      String?
+  created_at  DateTime?  @default(now()) @db.Timestamp(6)
+  updated_at  DateTime?  @db.Timestamp(6)
+  campanha    campanha[]
 }
 
 model usuario {
