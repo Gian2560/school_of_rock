@@ -26,18 +26,19 @@ model accion_comercial {
 }
 
 model campanha {
-  id_campanha     Int       @id @default(autoincrement())
-  nombre_campanha String    @db.VarChar(100)
-  descripcion     String?
-  fecha_creacion  DateTime? @default(now()) @db.Timestamp(6)
-  estado_campanha String?   @default("activa") @db.VarChar(25)
-  mensaje_cliente String?
-  fecha_inicio    DateTime? @default(now()) @db.Timestamp(6)
-  fecha_fin       DateTime? @db.Timestamp(6)
-  num_clientes    Int?      @default(0)
-  tipo            String    @default("in") @db.VarChar(10)
-  id_template     Int?
-  template        template? @relation(fields: [id_template], references: [id_template], onDelete: NoAction, onUpdate: NoAction)
+  id_campanha       Int       @id @default(autoincrement())
+  nombre_campanha   String    @db.VarChar(100)
+  descripcion       String?
+  fecha_creacion    DateTime? @default(now()) @db.Timestamp(6)
+  estado_campanha   String?   @default("activa") @db.VarChar(25)
+  mensaje_cliente   String?
+  fecha_inicio      DateTime? @default(now()) @db.Timestamp(6)
+  fecha_fin         DateTime? @db.Timestamp(6)
+  num_clientes      Int?      @default(0)
+  tipo              String    @default("in") @db.VarChar(10)
+  id_template       Int?
+  variable_mappings Json?     @default("{}") @db.Json
+  template          template? @relation(fields: [id_template], references: [id_template], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model cita {

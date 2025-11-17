@@ -78,7 +78,7 @@ export async function POST(request: Request) {
           telefono: mapField(['telefono', 'celular', 'phone', 'movil']),
           correo: mapField(['correo', 'email', 'mail', 'e-mail']),
           distrito: mapField(['distrito', 'district', 'ubicacion', 'location']),
-          segmento: mapField(['segmento', 'segment', 'categoria', 'category']),
+          //segmento: mapField(['segmento', 'segment', 'categoria', 'category']),
           estado: mapField(['estado', 'status']) || 'activo',
           errors: [] as string[],
           warnings: [] as string[]

@@ -94,6 +94,21 @@ export default function Campaigns() {
     description: "",
     selectedTemplate: ""
   })
+  
+  // Estados para mapeo de variables
+  const [templateVariables, setTemplateVariables] = useState<number[]>([])
+  const [variableMappings, setVariableMappings] = useState<Record<string, string>>({})
+  
+  // Campos disponibles de contacto para mapear
+  const availableFields = [
+    { value: "nombres", label: "Nombres" },
+    { value: "apellidos", label: "Apellidos" },
+    { value: "telefono", label: "Teléfono" },
+    { value: "correo", label: "Correo" },
+    { value: "distrito", label: "Distrito" },
+    { value: "colegio", label: "Colegio (datos_contacto)" },
+    { value: "edad_exacta", label: "Edad (datos_contacto)" }
+  ]
 
   // Estados para upload de Excel
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
@@ -148,6 +163,19 @@ export default function Campaigns() {
       })
       return
     }
+    
+    // Validar que todas las variables estén mapeadas
+    if (templateVariables.length > 0) {
+      const unmappedVars = Object.entries(variableMappings).filter(([_, value]) => !value)
+      if (unmappedVars.length > 0) {
+        toast({
+          title: "Variables sin mapear",
+          description: "Selecciona un campo para todas las variables del template",
+          variant: "destructive"
+        })
+        return
+      }
+    }
 
     try {
       setIsCreatingCampaign(true)
@@ -156,7 +184,8 @@ export default function Campaigns() {
         nombre_campanha: newCampaign.name,
         descripcion: newCampaign.description || null,
         id_template: newCampaign.selectedTemplate ? parseInt(newCampaign.selectedTemplate) : null,
-        estado_campanha: 'activa'
+        estado_campanha: 'activa',
+        variable_mappings: templateVariables.length > 0 ? variableMappings : null
       }
 
       const response = await fetch("/api/campanas", {
@@ -254,8 +283,42 @@ export default function Campaigns() {
       description: "", 
       selectedTemplate: ""
     })
+    setTemplateVariables([])
+    setVariableMappings({})
     setIsCreatingCampaign(false)
     setIsCampaignDialogOpen(false)
+  }
+  
+  // Cargar variables cuando se selecciona un template
+  const handleTemplateChange = async (templateId: string) => {
+    setNewCampaign({ ...newCampaign, selectedTemplate: templateId })
+    setVariableMappings({})
+    
+    if (templateId) {
+      try {
+        const response = await fetch(`/api/templates/${templateId}/variables`)
+        const data = await response.json()
+        
+        if (data.success) {
+          setTemplateVariables(data.variables)
+          // Inicializar mappings vacíos
+          const initialMappings: Record<string, string> = {}
+          data.variables.forEach((varNum: number) => {
+            initialMappings[varNum.toString()] = ""
+          })
+          setVariableMappings(initialMappings)
+        }
+      } catch (error) {
+        console.error("Error cargando variables:", error)
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las variables del template",
+          variant: "destructive"
+        })
+      }
+    } else {
+      setTemplateVariables([])
+    }
   }
 
   const resetTemplateStates = () => {
@@ -718,7 +781,7 @@ export default function Campaigns() {
                   <Label htmlFor="campaign-template">Template</Label>
                   <Select 
                     value={newCampaign.selectedTemplate} 
-                    onValueChange={(value) => setNewCampaign({ ...newCampaign, selectedTemplate: value })}
+                    onValueChange={handleTemplateChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar template..." />
@@ -740,6 +803,48 @@ export default function Campaigns() {
                     </div>
                   )}
                 </div>
+                
+                {/* Sección de mapeo de variables */}
+                {templateVariables.length > 0 && (
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <div>
+                      <h4 className="font-medium mb-2">Mapeo de Variables</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Selecciona qué campo de contacto corresponde a cada variable del template
+                      </p>
+                    </div>
+                    
+                    <Separator />
+                    
+                    {templateVariables.map((varNum) => (
+                      <div key={varNum} className="space-y-2">
+                        <Label htmlFor={`var-${varNum}`}>
+                          Variable {`{{${varNum}}}`}
+                        </Label>
+                        <Select
+                          value={variableMappings[varNum.toString()] || ""}
+                          onValueChange={(value) => {
+                            setVariableMappings({
+                              ...variableMappings,
+                              [varNum.toString()]: value
+                            })
+                          }}
+                        >
+                          <SelectTrigger id={`var-${varNum}`}>
+                            <SelectValue placeholder="Seleccionar campo..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableFields.map((field) => (
+                              <SelectItem key={field.value} value={field.value}>
+                                {field.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button 

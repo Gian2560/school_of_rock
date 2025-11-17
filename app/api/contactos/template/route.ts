@@ -15,24 +15,24 @@ export async function GET() {
         apellidos: "Pérez García",
         telefono: "999123456",
         correo: "juan.perez@email.com",
-        distrito: "Miraflores",
-        segmento: "premium"
+        distrito: "Miraflores"
+        //segmento: "premium"
       },
       {
         nombres: "María Elena",
         apellidos: "Rodríguez López",
         telefono: "987654321",
         correo: "maria.rodriguez@email.com",
-        distrito: "San Isidro",
-        segmento: "standard"
+        distrito: "San Isidro"
+        //segmento: "standard"
       },
       {
         nombres: "Carlos Alberto",
         apellidos: "Mendoza Silva",
         telefono: "956789123",
         correo: "carlos.mendoza@email.com",
-        distrito: "Surco",
-        segmento: "basic"
+        distrito: "Surco"
+        //segmento: "basic"
       }
     ]
 
@@ -49,7 +49,7 @@ export async function GET() {
       { wch: 12 }, // telefono
       { wch: 25 }, // correo
       { wch: 15 }, // distrito
-      { wch: 12 }  // segmento
+      //{ wch: 12 }  // segmento
     ]
     worksheet['!cols'] = columnWidths
 
@@ -84,9 +84,9 @@ export async function GET() {
       {
         "• distrito": "Distrito de residencia"
       },
-      {
-        "• segmento": "Categoría del contacto (premium, standard, basic, etc.)"
-      },
+      // {
+      //   "• segmento": "Categoría del contacto (premium, standard, basic, etc.)"
+      // },
       {},
       {
         "NOTAS IMPORTANTES": ""
@@ -124,10 +124,10 @@ export async function GET() {
       },
       {
         "distrito": "district, ubicacion, location"
-      },
-      {
-        "segmento": "segment, categoria, category"
       }
+      // {
+      //   "segmento": "segment, categoria, category"
+      // }
     ]
 
     const worksheetInstrucciones = XLSX.utils.json_to_sheet(instrucciones)

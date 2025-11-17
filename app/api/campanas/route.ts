@@ -100,7 +100,8 @@ export async function POST(request: Request) {
       nombre_campanha, 
       descripcion, 
       id_template,
-      estado_campanha = 'activa'
+      estado_campanha = 'activa',
+      variable_mappings
     } = body
 
     // Validaciones
@@ -118,36 +119,30 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log("📝 Creando campaña:", { nombre_campanha, descripcion, id_template })
+    console.log("📝 Creando campaña:", { nombre_campanha, descripcion, id_template, variable_mappings })
 
-    // Crear la campaña
-    const nuevaCampana = await prisma.$queryRaw`
-      INSERT INTO campanha (
-        nombre_campanha, 
-        descripcion, 
-        id_template, 
+    // Crear la campaña usando Prisma para manejar JSON correctamente
+    const nuevaCampana = await prisma.campanha.create({
+      data: {
+        nombre_campanha,
+        descripcion: descripcion || null,
+        id_template: parseInt(id_template),
         estado_campanha,
-        fecha_creacion,
-        fecha_inicio,
-        tipo
-      )
-      VALUES (
-        ${nombre_campanha}, 
-        ${descripcion || null}, 
-        ${id_template}, 
-        ${estado_campanha},
-        NOW(),
-        NOW(),
-        'out'
-      )
-      RETURNING *
-    ` as any[]
+        variable_mappings: variable_mappings || {},
+        fecha_creacion: new Date(),
+        fecha_inicio: new Date(),
+        tipo: 'out'
+      },
+      include: {
+        template: true
+      }
+    })
 
-    console.log("✅ Campaña creada:", nuevaCampana[0])
+    console.log("✅ Campaña creada:", nuevaCampana)
 
     return NextResponse.json(serializeBigInt({
       success: true,
-      campana: nuevaCampana[0]
+      campana: nuevaCampana
     }))
 
   } catch (error) {
