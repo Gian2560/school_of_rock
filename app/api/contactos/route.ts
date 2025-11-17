@@ -22,7 +22,7 @@ export async function GET() {
         segmento: true, 
         distrito: true,
         estado: true,
-        fecha_creacion: true,
+        fecha_ultima_interaccion: true,
         accion_comercial: {
           orderBy: { fecha_accion: 'desc' },
           take: 1,
@@ -45,7 +45,7 @@ export async function GET() {
       distrito: contacto.distrito || '',
       telefono: contacto.telefono || '',
       correo: contacto.correo || '',
-      fecha_creacion: contacto.fecha_creacion,
+      fecha_ultima_interaccion: contacto.fecha_ultima_interaccion || null,
       estado_accion_comercial: contacto.accion_comercial?.[0]?.estado ?? null,
     }));
 

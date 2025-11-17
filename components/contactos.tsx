@@ -66,8 +66,8 @@ function useContactos() {
             phone: contacto.telefono || '',
             correo: contacto.correo || '',
             estado_accion_comercial: contacto.estado_accion_comercial || '',
-            fecha_creacion: contacto.fecha_creacion,
-          lastContact: new Date(contacto.fecha_creacion).toLocaleDateString('es-ES'),
+            fecha_ultima_interaccion: contacto.fecha_ultima_interaccion,
+          lastContact: contacto.fecha_ultima_interaccion ? new Date(contacto.fecha_ultima_interaccion).toLocaleDateString('es-ES') : '',
           // Mantener datos originales para referencia
           originalData: contacto
         }))
