@@ -31,7 +31,7 @@ export async function GET() {
 
     // 1) Leads (contactos con estado = "nuevo")
     const leadsNuevo = await prisma.contacto.count({
-      where: { estado: { equals: "Nuevo", mode: "insensitive" } },
+      //where: { estado: { equals: "Nuevo", mode: "insensitive" } },
     });
 
     // 2) Llamadas agendadas (contactos con estado = "llamada_agendada")
