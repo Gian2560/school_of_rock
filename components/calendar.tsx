@@ -105,56 +105,21 @@ export function Calendar() {
   }
   const [currentDate, setCurrentDate] = useState(new Date()) // Mes y año actual por defecto
   const [view, setView] = useState("month")
-  const [selectedAdvisor, setSelectedAdvisor] = useState("all")
-  const [advisors, setAdvisors] = useState<Advisor[]>([]);
-  const [disableAdvisorSelect, setDisableAdvisorSelect] = useState(false);
   const [currentDay, setCurrentDay] = useState(new Date()) // Día actual para la vista diaria
-  //const citas = useCitas();
-
-  // --- NUEVO: info de usuario actual ---
-  const [me, setMe] = useState<{ roleId: number | null; personaId: number | null } | null>(null);
-  // --- Citas ---
   const [citas, setCitas] = useState<Cita[]>([]);
-// Carga “me” y, si es asesora (rol=2), fija el filtro y bloquea select
+
+
+
+
+  // Cargar todas las citas
   useEffect(() => {
     (async () => {
-      const r = await fetch("/api/me");
+      const r = await fetch("/api/citas");
       if (!r.ok) return;
-      const data = await r.json();
-      setMe({ roleId: data.roleId, personaId: data.personaId });
-
-      if (data.roleId === 2 && data.personaId) {
-        setSelectedAdvisor(String(data.personaId));
-        setDisableAdvisorSelect(true);
-      } else {
-        setSelectedAdvisor("all");
-        setDisableAdvisorSelect(false);
-      }
-    })();
-  }, []);
-
-  // Cargar lista de asesoras
-  useEffect(() => {
-    (async () => {
-      const r = await fetch("/api/advisors");
-      if (!r.ok) return;
-      const list = await r.json();
-      setAdvisors(list);
-    })();
-  }, []);
-
-  // Traer citas cada vez que cambia el filtro
-  useEffect(() => {
-    const url =
-      selectedAdvisor !== "all"
-        ? `/api/citas?advisorId=${encodeURIComponent(selectedAdvisor)}`
-        : `/api/citas`;
-    (async () => {
-      const r = await fetch(url);
       const json = await r.json();
       setCitas(json);
     })();
-  }, [selectedAdvisor]);
+  }, []);
 
   // Mapea las citas al formato que usa el calendario
   // const appointmentsData = citas.map(cita => {
@@ -394,21 +359,6 @@ const countToday = useMemo(
         </div>
 
         <div className="flex gap-2">
-          <Select value={selectedAdvisor} onValueChange={setSelectedAdvisor} disabled={disableAdvisorSelect}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Asesora" />
-            </SelectTrigger>
-            <SelectContent>
-              {/* Sólo muestra "Todas" si no es asesora */}
-              {!(me?.roleId === 2) && <SelectItem value="all">Todas</SelectItem>}
-              {advisors.map(a => (
-                <SelectItem key={a.id_persona} value={String(a.id_persona)}>
-                  {a.nombres} {a.apellidos}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <Select value={view} onValueChange={setView}>
             <SelectTrigger className="w-32">
               <SelectValue />
