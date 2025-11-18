@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, CalendarIcon, Clock, User, Phone } from "luc
 type Cita = {
   id_cita: number;
   fecha_programada: string;
+  tipo: string; // "visita" o "llamada"
   contacto?: {
     nombres?: string;
     apellidos?: string;
@@ -74,6 +75,7 @@ export function Calendar() {
               appointments.map((apt) => (
                 <div key={apt.id_cita} className={`text-xs p-1 rounded flex items-center gap-1 ${getTypeColor(apt.type)}`}>
                   {apt.type === "visit" && <User className="w-3 h-3 inline-block" />}
+                  {apt.type === "call" && <Phone className="w-3 h-3 inline-block" />}
                   <span>{apt.time} - {apt.leadName}</span>
                 </div>
               ))
@@ -139,10 +141,11 @@ export function Calendar() {
   const appointmentsData = useMemo(() => {
     return citas.map((cita) => {
       const fecha = new Date(cita.fecha_programada);
+      const esLlamada = cita.tipo === "llamada";
       return {
         id_cita: cita.id_cita,
-        title: `Visita - ${cita.contacto?.nombres ?? ""} ${cita.contacto?.apellidos ?? ""}`,
-        type: "visit",
+        title: `${esLlamada ? "Llamada" : "Visita"} - ${cita.contacto?.nombres ?? ""} ${cita.contacto?.apellidos ?? ""}`,
+        type: esLlamada ? "call" : "visit",
         time: fecha.toLocaleTimeString("es-PE", {
           hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Lima" ,
         }),
@@ -241,6 +244,7 @@ export function Calendar() {
             {appointments.slice(0, 2).map((apt) => (
               <div key={apt.id_cita} className={`text-xs p-1 rounded flex items-center gap-1 ${getTypeColor(apt.type)}`}>
                 {apt.type === "visit" && <User className="w-3 h-3 inline-block" />}
+                {apt.type === "call" && <Phone className="w-3 h-3 inline-block" />}
                 <span>{apt.time} - {apt.leadName}</span>
               </div>
             ))}
@@ -396,18 +400,10 @@ const countToday = useMemo(
               <User className="w-4 h-4" />
               <span className="text-sm">Visita al local</span>
             </div>
-            {/* <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4" />
-              <span className="text-sm">Llamada</span>
-            </div> */}
-            {/* <div className="flex items-center gap-2">
-              <CalendarIcon className="w-4 h-4" />
-              <span className="text-sm">Clase de prueba</span>
-            </div>
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm">Seguimiento</span>
-            </div> */}
+              <Phone className="w-4 h-4" />
+              <span className="text-sm">Llamada agendada</span>
+            </div>
           </div>
         </CardContent>
       </Card>
