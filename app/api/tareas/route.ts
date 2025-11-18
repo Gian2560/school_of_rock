@@ -86,7 +86,7 @@ export async function GET(req: Request) {
     //   WHERE t.estado_tarea = 'pendiente' OR t.estado_tarea IS NULL
     //   ORDER BY c.prioridad ASC NULLS LAST, t.fecha_creacion DESC
     // ` as any[]
-    // Consulta
+    // Consulta con filtro adicional para excluir tareas completadas
     const sql = `
       SELECT 
         t.id_tarea,
@@ -104,6 +104,7 @@ export async function GET(req: Request) {
         c.segmento,
         c.prioridad,
         c.fecha_creacion as contacto_fecha_creacion,
+        c.fecha_ultima_interaccion,
         ac.estado as ultimo_estado_comercial,
         ac.fecha_accion as ultima_fecha_comercial
       FROM tarea t
@@ -116,6 +117,11 @@ export async function GET(req: Request) {
         ORDER BY id_tarea, fecha_accion DESC
       ) ac ON t.id_tarea = ac.id_tarea
       ${where}
+      AND NOT (
+        ac.estado = 'Visita agendada' 
+        AND c.fecha_ultima_interaccion IS NOT NULL 
+        AND c.fecha_ultima_interaccion < ac.fecha_accion
+      )
       ORDER BY c.prioridad ASC NULLS LAST, t.fecha_creacion DESC
     `
 

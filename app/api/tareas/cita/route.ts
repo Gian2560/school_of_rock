@@ -62,6 +62,31 @@ export async function POST(request: Request) {
 
     const tarea = tareaConContacto[0]
 
+    // Obtener usuario logueado y su id_persona
+    // @ts-ignore
+    const { getServerSession } = await import('next-auth/next');
+    // @ts-ignore
+    const { authOptions } = await import('@/app/api/auth/[...nextauth]/route');
+    const session = await getServerSession(authOptions);
+    
+    let asesorId: number | null = null;
+    
+    if (session && (session.user as any)?.id) {
+      const persona = await prisma.persona.findFirst({
+        where: { id_usuario: Number((session.user as any).id) },
+      });
+      asesorId = persona?.id_persona ?? null;
+    }
+    
+    if (!asesorId) {
+      return NextResponse.json(
+        { error: "No autorizado - debe iniciar sesión" },
+        { status: 401 }
+      )
+    }
+
+    console.log("✅ Usando asesor ID del usuario logueado:", asesorId)
+
     // Crear la cita
     const cita = await prisma.$queryRaw`
       INSERT INTO cita (id_contacto, tipo, fecha_programada, estado, notas, fecha_creacion)
@@ -71,11 +96,18 @@ export async function POST(request: Request) {
 
     // Registrar acción comercial asociada
     await prisma.$queryRaw`
-      INSERT INTO accion_comercial (tipo_accion, id_tarea, id_cita, id_contacto,asesor_id, estado, fecha_accion, nota)
-      VALUES ('visita', ${id_tarea}, ${cita[0].id_cita}, ${tarea.id_contacto}, 1, 'Visita agendada', NOW(), ${`Cita agendada para ${fechaHora}. ${notas || ''}`})
+      INSERT INTO accion_comercial (tipo_accion, id_tarea, id_cita, id_contacto, asesor_id, estado, fecha_accion, nota)
+      VALUES ('visita', ${id_tarea}, ${cita[0].id_cita}, ${tarea.id_contacto}, ${asesorId}, 'Visita agendada', NOW(), ${`Cita agendada para ${fechaHora}. ${notas || ''}`})
     `
 
-    console.log("✅ Cita agendada desde tarea:", cita[0])
+    // Marcar la tarea como completada
+    await prisma.$queryRaw`
+      UPDATE tarea 
+      SET estado_tarea = 'completado', fecha_actualizacion = NOW()
+      WHERE id_tarea = ${id_tarea}
+    `
+
+    console.log("✅ Cita agendada desde tarea y tarea marcada como completada:", cita[0])
 
     return NextResponse.json(serializeBigInt({
       success: true,

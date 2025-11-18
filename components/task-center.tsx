@@ -156,6 +156,55 @@ function useTareas(filters: { range: string; start?: string; end?: string; appli
   return { tareas, loading, refetchTareas: fetchTareas }
 }
 
+// Hook para obtener estadísticas de completados
+function useTaskStats(filters: { range: string; start?: string; end?: string; applied?: boolean }) {
+  const [stats, setStats] = useState<Record<number, { completadas: number; pendientes: number }>>({})
+  const [loading, setLoading] = useState(true)
+
+  const fetchStats = () => {
+    setLoading(true)
+    const params = new URLSearchParams()
+    params.set("range", filters.range)
+    if (filters.range === "custom" && filters.start && filters.end) {
+      params.set("start", filters.start)
+      params.set("end", filters.end)
+    }
+    const url = `/api/tareas/stats?${params.toString()}`
+
+    fetch(url, { cache: "no-store" })
+      .then(async (res) => {
+        const data = await res.json()
+        if (data.success) {
+          const statsMap: Record<number, { completadas: number; pendientes: number }> = {}
+          data.stats.forEach((stat: any) => {
+            statsMap[stat.prioridad] = {
+              completadas: stat.completadas,
+              pendientes: stat.pendientes
+            }
+          })
+          setStats(statsMap)
+        }
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error("❌ Error cargando estadísticas:", err)
+        setStats({})
+        setLoading(false)
+      })
+  }
+
+  useEffect(() => {
+    if (filters.range === "custom" && !filters.applied) {
+      setStats({})
+      setLoading(false)
+      return
+    }
+    fetchStats()
+  }, [filters.range, filters.start, filters.end])
+
+  return { stats, loading: loading, refetchStats: fetchStats }
+}
+
 export function TaskCenter() {
   // ====== NUEVOS ESTADOS DE FILTRO ======
   const [filterRange, setFilterRange] = useState<"today" | "week" | "month" | "custom">("today")
@@ -164,6 +213,13 @@ export function TaskCenter() {
   const [customApplied, setCustomApplied] = useState(false)
 
   const { tareas, loading, refetchTareas } = useTareas({
+    range: filterRange,
+    start: customStart || undefined,
+    end: customEnd || undefined,
+    applied: customApplied,
+  })
+
+  const { stats, refetchStats } = useTaskStats({
     range: filterRange,
     start: customStart || undefined,
     end: customEnd || undefined,
@@ -297,8 +353,9 @@ export function TaskCenter() {
   console.log("📊 Total tareas recibidas:", tareas.length)
   console.log("🔍 Detalle por prioridad:")
   Object.entries(priorityGroups).forEach(([priority, tasks]) => {
-    console.log(`  - Prioridad ${priority}: ${tasks.length} tareas`)
-    tasks.forEach((task: any, index: number) => {
+    const taskList = tasks as any[]
+    console.log(`  - Prioridad ${priority}: ${taskList.length} tareas`)
+    taskList.forEach((task: any, index: number) => {
       console.log(`    ${index + 1}. ${task.leadName} (ID: ${task.id})`)
     })
   })
@@ -441,6 +498,7 @@ export function TaskCenter() {
             description: `La llamada (${callResult}) fue registrada correctamente.`,
           });
           refetchTareas(); // Refrescar datos después de la acción
+          refetchStats(); // Refrescar estadísticas
         } else {
           toast({
             title: "Error al registrar llamada",
@@ -481,6 +539,7 @@ export function TaskCenter() {
           description: data.message || `La cita para ${selectedLead.leadName} fue registrada correctamente.`,
         });
         refetchTareas(); // Refrescar datos después de la acción
+        refetchStats(); // Refrescar estadísticas
       } else {
         toast({
           title: "Error al agendar cita",
@@ -905,39 +964,45 @@ export function TaskCenter() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {Object.entries(priorityGroups).map(([priority, tasks]) => (
-          <Card
-            key={priority}
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handlePriorityClick(priority)}
-          >
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center justify-between">
-                <span>Prioridad {priority}</span>
-                <Badge className={getPriorityColor(priority)}>{tasks.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-foreground">
-                    {priorityGroups[priority].filter((t: any) => t.status === "pending").length}
+        {Object.entries(priorityGroups).map(([priority, tasks]) => {
+          const taskList = tasks as any[]
+          const priorityNumber = priority === 'I' ? 1 : priority === 'II' ? 2 : priority === 'III' ? 3 : 4
+          const completadas = stats[priorityNumber]?.completadas || 0
+          
+          return (
+            <Card
+              key={priority}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => handlePriorityClick(priority)}
+            >
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between">
+                  <span>Prioridad {priority}</span>
+                  <Badge className={getPriorityColor(priority)}>{taskList.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-foreground">
+                      {priorityGroups[priority].filter((t: any) => t.status === "pending").length}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Pendientes</p>
                   </div>
-                  <p className="text-sm text-muted-foreground">Pendientes</p>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-medium text-green-600">
-                    {priorityGroups[priority].filter((t: any) => t.status === "completed").length}
+                  <div className="text-center">
+                    <div className="text-lg font-medium text-green-600">
+                      {completadas}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Completadas</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">Completadas</p>
+                  <Button variant="outline" className="w-full bg-transparent" size="sm">
+                    Ver detalles
+                  </Button>
                 </div>
-                <Button variant="outline" className="w-full bg-transparent" size="sm">
-                  Ver detalles
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {/* Summary Stats */}
