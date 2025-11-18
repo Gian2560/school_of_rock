@@ -59,7 +59,7 @@ function useContactos() {
         const mappedContactos = data.map((contacto: any) => ({
           id_contacto: contacto.id_contacto,
           rol_contacto: contacto.rol_contacto,  
-          name: `${contacto.nombres} ${contacto.apellidos}`.trim(),
+          name: `${contacto.nombres} ${contacto.apellidos}`.trim() || "Desconocido",
           segment: contacto.segmento || '',
             status: contacto.estado,
             district: contacto.distrito || '',

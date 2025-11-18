@@ -69,7 +69,7 @@ export async function GET(req: Request) {
     // --- WHERE (usar Date, no strings)
     const where: any = {
       AND: [
-        { fecha_creacion: { lt: startNorm } },      // creado antes del período
+        // Eliminado: fecha_creacion: { lt: startNorm } - ahora muestra todos los que interactuaron en el rango
         {
           fecha_ultima_interaccion: {
             not: null,

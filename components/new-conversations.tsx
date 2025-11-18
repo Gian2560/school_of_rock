@@ -369,16 +369,17 @@ function useNuevasConversaciones(params: {
 
       const mapped = (json.contactos || []).map((c: any) => {
         const last = c.fecha_ultima_interaccion ?? c.fecha_creacion ?? null;
+        const nombreCompleto = `${c.nombres ?? ""} ${c.apellidos ?? ""}`.trim();
         return {
           id_contacto: c.id_contacto,
           rol_contacto: c.rol_contacto,
-          name: `${c.nombres ?? ""} ${c.apellidos ?? ""}`.trim(),
+          name: nombreCompleto || "Desconocido",
           phone: c.telefono ?? "",
           correo: c.correo ?? "",
           segment: c.segmento ?? "",
           status: c.estado ?? "",
           district: c.distrito ?? "",
-          lastContact: last ? new Date(last).toLocaleString("es-PE") : "—",
+          lastContact: last ? new Date(last).toLocaleDateString("es-PE") : "—",
           estado_accion_comercial: c.estado_accion_comercial ?? "",
           // para refrescar kids modal sin perder info original
           _raw: c,
