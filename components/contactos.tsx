@@ -107,6 +107,7 @@ function useContactos() {
 export function Contactos() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterSegment, setFilterSegment] = useState("all")
+  const [filterEstadoAsesor, setFilterEstadoAsesor] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(5)
 
@@ -266,7 +267,8 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
         lead.correo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lead.phone?.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesSegment = filterSegment === "all" || lead.segment === filterSegment
-      return matchesSearch && matchesSegment
+      const matchesEstadoAsesor = filterEstadoAsesor === "all" || lead.estado_accion_comercial === filterEstadoAsesor
+      return matchesSearch && matchesSegment && matchesEstadoAsesor
     })
 
   // ----- NUEVO: cargar conversación -----
@@ -443,6 +445,18 @@ const getStatusAsesorColor = (estado_accion_comercial: string) => {
             <SelectItem value="C1">C1</SelectItem>
             <SelectItem value="C2">C2</SelectItem>
             <SelectItem value="C3">C3</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterEstadoAsesor} onValueChange={setFilterEstadoAsesor}>
+          <SelectTrigger className="w-48">
+            <Filter className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Estado Asesor" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los estados</SelectItem>
+            <SelectItem value="Volver a contactar">Volver a contactar</SelectItem>
+            <SelectItem value="Visita agendada">Visita agendada</SelectItem>
+            <SelectItem value="No interesado">No interesado</SelectItem>
           </SelectContent>
         </Select>
       </div>

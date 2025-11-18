@@ -71,10 +71,10 @@ model cliente_campanha {
 model contacto {
   id_contacto              Int                @id @default(autoincrement())
   rol_contacto             String             @default("apoderado") @db.VarChar(100)
-  nombres                  String             @db.VarChar(100)
+  nombres                  String?            @db.VarChar(100)
   apellidos                String?            @db.VarChar(100)
   telefono                 String?            @unique(map: "uq_contacto_tel") @db.VarChar(20)
-  correo                   String?            @unique(map: "uq_contacto_correo") @db.VarChar(120)
+  correo                   String?            @db.VarChar(120)
   distrito                 String?            @db.VarChar(120)
   estado                   String?            @db.VarChar(30)
   puntaje_nse              Int?
