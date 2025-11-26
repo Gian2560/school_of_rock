@@ -43,91 +43,74 @@ export async function GET(req: Request) {
     // - month: [inicio de mes, inicio del sig. mes)
     // - custom: [start 00:00, end +1 día 00:00) si vienen ambos
     if (range === "today") {
-      where += ` AND t.fecha_creacion >= CURRENT_DATE AND t.fecha_creacion < (CURRENT_DATE + INTERVAL '1 day')`
+  // Hoy considerando -5 horas
+      where += `
+        AND t.fecha_creacion >= (now() - INTERVAL '5 hours')::date
+        AND t.fecha_creacion <  ((now() - INTERVAL '5 hours')::date + INTERVAL '1 day')
+      `
     } else if (range === "week") {
-      where += ` AND t.fecha_creacion >= date_trunc('week', CURRENT_DATE) AND t.fecha_creacion < (date_trunc('week', CURRENT_DATE) + INTERVAL '1 week')`
+      // Semana actual considerando -5 horas
+      where += `
+        AND t.fecha_creacion >= date_trunc('week', (now() - INTERVAL '5 hours')::timestamp)
+        AND t.fecha_creacion <  (date_trunc('week', (now() - INTERVAL '5 hours')::timestamp) + INTERVAL '1 week')
+      `
     } else if (range === "month") {
-      where += ` AND t.fecha_creacion >= date_trunc('month', CURRENT_DATE) AND t.fecha_creacion < (date_trunc('month', CURRENT_DATE) + INTERVAL '1 month')`
+      // Mes actual considerando -5 horas
+      where += `
+        AND t.fecha_creacion >= date_trunc('month', (now() - INTERVAL '5 hours')::timestamp)
+        AND t.fecha_creacion <  (date_trunc('month', (now() - INTERVAL '5 hours')::timestamp) + INTERVAL '1 month')
+      `
     } else if (range === "custom" && start && end) {
-      // Interpretamos start/end como fechas (00:00 local del servidor)
-      where += ` AND t.fecha_creacion >= '${start}'::date AND t.fecha_creacion < ('${end}'::date + INTERVAL '1 day')`
+      // Custom lo dejas igual
+      where += `
+        AND t.fecha_creacion >= '${start}'::date
+        AND t.fecha_creacion <  ('${end}'::date + INTERVAL '1 day')
+      `
     }
     console.log("🔍 Consultando tareas pendientes...")
     
     // Usar consulta SQL directa como alternativa
-    // const tareas = await prisma.$queryRaw`
-    //   SELECT 
-    //     t.id_tarea,
-    //     t.id_contacto,
-    //     t.estado_bot,
-    //     t.fecha_creacion,
-    //     t.fecha_actualizacion,
-    //     t.estado_tarea,
-    //     c.nombres,
-    //     c.apellidos,
-    //     c.telefono,
-    //     c.correo,
-    //     c.distrito,
-    //     c.estado,
-    //     c.segmento,
-    //     c.prioridad,
-    //     c.fecha_creacion as contacto_fecha_creacion,
-    //     ac.estado as ultimo_estado_comercial,
-    //     ac.fecha_accion as ultima_fecha_comercial
-    //   FROM tarea t
-    //   LEFT JOIN contacto c ON t.id_contacto = c.id_contacto
-    //   LEFT JOIN (
-    //     SELECT DISTINCT ON (id_tarea) 
-    //       id_tarea, estado, fecha_accion
-    //     FROM accion_comercial 
-    //     WHERE id_tarea IS NOT NULL
-    //     ORDER BY id_tarea, fecha_accion DESC
-    //   ) ac ON t.id_tarea = ac.id_tarea
-    //   WHERE t.estado_tarea = 'pendiente' OR t.estado_tarea IS NULL
-    //   ORDER BY c.prioridad ASC NULLS LAST, t.fecha_creacion DESC
-    // ` as any[]
-    // Consulta con filtro adicional para excluir tareas completadas
     const sql = `
-      SELECT 
-        t.id_tarea,
-        t.id_contacto,
-        t.estado_bot,
-        t.fecha_creacion,
-        t.fecha_actualizacion,
-        t.estado_tarea,
-        c.nombres,
-        c.apellidos,
-        c.telefono,
-        c.correo,
-        c.distrito,
-        c.estado,
-        c.segmento,
-        c.prioridad,
-        c.fecha_creacion as contacto_fecha_creacion,
-        c.fecha_ultima_interaccion,
-        ac.estado as ultimo_estado_comercial,
-        ac.fecha_accion as ultima_fecha_comercial
-      FROM tarea t
-      LEFT JOIN contacto c ON t.id_contacto = c.id_contacto
-      LEFT JOIN (
-        SELECT DISTINCT ON (id_tarea) 
-          id_tarea, estado, fecha_accion
-        FROM accion_comercial 
-        WHERE id_tarea IS NOT NULL
-        ORDER BY id_tarea, fecha_accion DESC
-      ) ac ON t.id_tarea = ac.id_tarea
-      ${where}
-      AND NOT (
-        ac.estado = 'Visita agendada' 
-        AND c.fecha_ultima_interaccion IS NOT NULL 
-        AND c.fecha_ultima_interaccion < ac.fecha_accion
-      )
-      ORDER BY c.prioridad ASC NULLS LAST, t.fecha_creacion DESC
-    `
-
+  SELECT 
+    t.id_tarea,
+    t.id_contacto,
+    t.estado_bot,
+    t.fecha_creacion,
+    t.fecha_actualizacion,
+    t.estado_tarea,
+    c.nombres,
+    c.apellidos,
+    c.telefono,
+    c.distrito,
+    c.estado,
+    c.segmento,
+    c.prioridad,
+    c.fecha_creacion as contacto_fecha_creacion,
+    c.fecha_ultima_interaccion,
+    ac.estado as ultimo_estado_comercial,
+    ac.fecha_accion as ultima_fecha_comercial
+  FROM tarea t
+  LEFT JOIN contacto c ON t.id_contacto = c.id_contacto
+  LEFT JOIN (
+    SELECT DISTINCT ON (id_tarea) 
+      id_tarea, estado, fecha_accion
+    FROM accion_comercial 
+    WHERE id_tarea IS NOT NULL
+    ORDER BY id_tarea, fecha_accion DESC
+  ) ac ON t.id_tarea = ac.id_tarea
+  ${where}
+  AND (
+    ac.id_tarea IS NULL
+    OR NOT (
+      ac.estado = 'Visita agendada'
+      AND c.fecha_ultima_interaccion IS NOT NULL
+      AND c.fecha_ultima_interaccion < ac.fecha_accion
+    )
+  )
+  ORDER BY c.prioridad ASC NULLS LAST, t.fecha_creacion DESC
+`
     const tareas = await prisma.$queryRawUnsafe(sql) as any[]
-    
-    console.log(`🔍 Tareas brutas desde DB: ${tareas.length}`)
+    console.log(`🔍 Tareas brutas desde DB (sin filtrar): ${tareas.length}`)
 
     // Eliminar duplicados por contacto (mantener solo la tarea más reciente)
     const tareasUnicas = tareas.filter((tarea, index, array) => {
